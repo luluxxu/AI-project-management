@@ -1,11 +1,13 @@
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import DashboardPage from "./pages/DashboardPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import CalendarPage from "./pages/CalendarPage";
 import TeamPage from "./pages/TeamPage";
 import AiAssistantPage from "./pages/AiAssistantPage";
 import ActivityPage from "./pages/ActivityPage";
+import LoginPage from "./pages/LoginPage";
 import { useProjectStore } from "./utils/useProjectStore";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 const links = [
   ["/", "Dashboard"],
@@ -16,15 +18,27 @@ const links = [
   ["/activity", "Activity"],
 ];
 
-export default function App() {
+// Redirect to /login if not authenticated
+function RequireAuth({ children }) {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
+
+// Main app shell — only rendered for authenticated users
+function AuthenticatedApp() {
   const store = useProjectStore();
+  const { user, logout } = useAuth();
+
+  if (store.loading) {
+    return <div style={{ padding: "2rem", color: "#6b7280" }}>Loading...</div>;
+  }
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div>
           <div className="brand">TaskPilot AI</div>
-          <p className="muted">Project management demo platform</p>
+          <p className="muted">Project management platform</p>
         </div>
 
         <div className="workspace-box">
@@ -58,6 +72,16 @@ export default function App() {
             </NavLink>
           ))}
         </nav>
+
+        {/* User info + logout at bottom */}
+        <div style={{ marginTop: "auto", paddingTop: "1rem", borderTop: "1px solid #e5e7eb" }}>
+          <p className="muted" style={{ fontSize: "0.8rem", marginBottom: "0.5rem" }}>
+            {user?.name || user?.email}
+          </p>
+          <button className="secondary-btn" onClick={logout}>
+            Log out
+          </button>
+        </div>
       </aside>
 
       <main className="main-content">
@@ -68,9 +92,6 @@ export default function App() {
               Keep projects, tasks, deadlines, and team updates in one place.
             </p>
           </div>
-          <button className="primary-btn" onClick={store.resetDemoData}>
-            Reset Demo Data
-          </button>
         </header>
 
         <Routes>
@@ -83,5 +104,23 @@ export default function App() {
         </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/*"
+          element={
+            <RequireAuth>
+              <AuthenticatedApp />
+            </RequireAuth>
+          }
+        />
+      </Routes>
+    </AuthProvider>
   );
 }

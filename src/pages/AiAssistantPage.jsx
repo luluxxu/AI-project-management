@@ -33,7 +33,7 @@ export default function AiAssistantPage({ store }) {
       const result = await extractTasksWithClaude(text, apiKey);
       setDrafts(result ?? extractTasksFromText(text));
     } catch (e) {
-      setError((prev) => ({ ...prev, extract: e.message || "任务提取失败" }));
+      setError((prev) => ({ ...prev, extract: e.message || "Task extraction failed" }));
       setDrafts(extractTasksFromText(text));
     } finally {
       setLoading((prev) => ({ ...prev, extract: false }));
@@ -57,7 +57,7 @@ export default function AiAssistantPage({ store }) {
       );
       setPlan(result ?? generateDailyPlan(store.scopedTasks));
     } catch (e) {
-      setError((prev) => ({ ...prev, plan: e.message || "计划生成失败" }));
+      setError((prev) => ({ ...prev, plan: e.message || "Plan generation failed" }));
       setPlan(generateDailyPlan(store.scopedTasks));
     } finally {
       setLoading((prev) => ({ ...prev, plan: false }));
@@ -75,8 +75,8 @@ export default function AiAssistantPage({ store }) {
 
       <div className="two-col-grid">
         <SectionCard
-          title="任务提取"
-          subtitle={hasKey ? "由 Claude Haiku 驱动" : "启发式模式（无 API Key）"}
+          title="Task Extraction"
+          subtitle={hasKey ? "Powered by Groq / Llama 3" : "Heuristic mode (no API key)"}
         >
           <div className="form-grid">
             <textarea rows="5" value={text} onChange={(e) => setText(e.target.value)} />
@@ -86,7 +86,7 @@ export default function AiAssistantPage({ store }) {
                 onChange={(e) => setSelectedProjectId(e.target.value)}
                 style={{ flex: 1 }}
               >
-                <option value="">选择项目</option>
+                <option value="">Select project</option>
                 {store.scopedProjects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -94,7 +94,7 @@ export default function AiAssistantPage({ store }) {
                 ))}
               </select>
               <button className="secondary-btn" onClick={handleExtract} disabled={loading.extract}>
-                {loading.extract ? "分析中…" : "提取任务"}
+                {loading.extract ? "Analyzing…" : "Extract Tasks"}
               </button>
               <button
                 className="primary-btn"
@@ -105,52 +105,52 @@ export default function AiAssistantPage({ store }) {
                   setDrafts([]);
                 }}
               >
-                导入任务
+                Import Tasks
               </button>
             </div>
           </div>
           {error.extract && <p className="inline-error">{error.extract}</p>}
           <SimpleTable
             columns={[
-              { key: "title", label: "任务标题" },
-              { key: "priority", label: "优先级" },
-              { key: "effort", label: "预估工时(h)" },
+              { key: "title", label: "Task Title" },
+              { key: "priority", label: "Priority" },
+              { key: "effort", label: "Est. Hours" },
             ]}
             rows={drafts}
-            emptyLabel="粘贴会议记录或需求文本，点击「提取任务」生成草稿。"
+            emptyLabel="Paste meeting notes or requirements, then click Extract Tasks."
           />
         </SectionCard>
 
         <SectionCard
-          title="每日计划建议"
-          subtitle={hasKey ? "由 Claude Haiku 驱动" : "启发式模式（无 API Key）"}
+          title="Daily Plan Suggestions"
+          subtitle={hasKey ? "Powered by Groq / Llama 3" : "Heuristic mode (no API key)"}
         >
           <div style={{ marginBottom: "1rem" }}>
             <button className="secondary-btn" onClick={handleGeneratePlan} disabled={loading.plan}>
-              {loading.plan ? "生成中…" : "生成今日计划"}
+              {loading.plan ? "Generating…" : "Generate Today's Plan"}
             </button>
           </div>
           {error.plan && <p className="inline-error">{error.plan}</p>}
           <SimpleTable
             columns={[
-              { key: "rank", label: "优先级" },
-              { key: "title", label: "任务" },
-              { key: "reason", label: "原因" },
+              { key: "rank", label: "Rank" },
+              { key: "title", label: "Task" },
+              { key: "reason", label: "Reason" },
             ]}
             rows={plan}
-            emptyLabel="点击「生成今日计划」获取 AI 建议。"
+            emptyLabel="Click Generate Today's Plan to get AI recommendations."
           />
         </SectionCard>
       </div>
 
       <SectionCard
-        title="AI 对话助手"
-        subtitle={hasKey ? "与 Claude 对话，了解项目状态、获取建议" : "需要配置 API Key 才能使用"}
+        title="AI Chat Assistant"
+        subtitle={hasKey ? "Chat with Llama 3 about your workspace" : "Configure an API key above to enable"}
       >
         {hasKey ? (
           <AiChatPanel apiKey={apiKey} store={store} />
         ) : (
-          <p className="empty-label">请先在上方配置 Claude API Key 以启用对话功能。</p>
+          <p className="empty-label">Please configure a Claude API key above to enable the chat assistant.</p>
         )}
       </SectionCard>
     </div>

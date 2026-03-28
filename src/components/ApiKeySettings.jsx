@@ -1,54 +1,66 @@
 import { useState } from "react";
 import SectionCard from "./SectionCard";
 
+// Displays an input to save a Groq API key, or a masked preview once one is saved.
+// Props:
+//   apiKey  — current key string (empty if not set)
+//   hasKey  — boolean shortcut: true when a key is stored
+//   onSave  — callback(key: string) called when the user clicks Save
+//   onClear — callback() called when the user clicks Clear Key
 export default function ApiKeySettings({ apiKey, hasKey, onSave, onClear }) {
+  // Local state for the text the user types in the password input.
   const [inputValue, setInputValue] = useState("");
 
+  // Show only the last 4 characters so the full key is never visible on screen.
   const maskedKey = hasKey
     ? `sk-ant-...${apiKey.slice(-4)}`
     : "";
 
   const handleSave = () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim()) return; // ignore empty submissions
     onSave(inputValue);
-    setInputValue("");
+    setInputValue("");              // clear the input after saving
   };
 
   return (
     <SectionCard
-      title="Claude API Settings"
+      title="Groq API Settings"
       subtitle={
+        // Show a green badge when connected, grey badge when not configured.
         hasKey ? (
-          <span className="ai-status-badge ai-status-active">Claude Haiku 已连接</span>
+          <span className="ai-status-badge ai-status-active">Groq / Llama 3 Connected</span>
         ) : (
-          <span className="ai-status-badge ai-status-inactive">未配置 — 使用启发式模式</span>
+          <span className="ai-status-badge ai-status-inactive">Not configured — heuristic mode</span>
         )
       }
     >
       {hasKey ? (
+        // Key is already saved — show the masked value and a Clear button.
         <div className="api-key-row">
           <span className="api-key-display">{maskedKey}</span>
-          <button className="secondary-btn" onClick={onClear}>清除 Key</button>
+          <button className="secondary-btn" onClick={onClear}>Clear Key</button>
         </div>
       ) : (
+        // No key yet — show a password input and Save button.
         <div className="api-key-row">
           <input
-            type="password"
+            type="password"          // hides the key while typing
             className="api-key-input"
-            placeholder="sk-ant-api03-..."
+            placeholder="gsk_..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+            onKeyDown={(e) => e.key === "Enter" && handleSave()} // allow Enter to save
           />
           <button className="primary-btn" onClick={handleSave} disabled={!inputValue.trim()}>
-            保存 Key
+            Save Key
           </button>
         </div>
       )}
+      {/* Only show the hint and link when no key is set. */}
       {!hasKey && (
         <p className="api-key-hint">
-          Key 仅存储在你的浏览器 localStorage 中，不会上传到任何服务器。
-          前往 <a href="https://console.anthropic.com" target="_blank" rel="noreferrer">console.anthropic.com</a> 获取 API Key。
+          Your key is stored only in this browser's localStorage and is never sent to any server.
+          Get a free API key at <a href="https://console.groq.com" target="_blank" rel="noreferrer">console.groq.com →</a>
         </p>
       )}
     </SectionCard>

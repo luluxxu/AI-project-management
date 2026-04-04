@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.DS_Store
+
+# SQLite database files (generated at runtime, not committed)
+server/*.db
+server/*.db-wal
+server/*.db-shm

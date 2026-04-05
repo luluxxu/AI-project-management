@@ -2,7 +2,7 @@ import SectionCard from "../components/SectionCard";
 
 export default function ActivityPage({ store }) {
   return (
-    <div className="page-grid">
+    <div className="grid gap-4">
       <SectionCard title="Activity Log" subtitle="Simple audit trail for project actions">
         <ul className="activity-list">
           {store.scopedActivities.map((activity) => (

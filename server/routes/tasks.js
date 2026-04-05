@@ -1,21 +1,19 @@
 import { Router } from "express";
 import db from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireWorkspaceAccess, canAccessWorkspace } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
-import { ensureOwnedWorkspace, logActivity, uid } from "../utils/workspace.js";
+import { logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
 
 // GET /api/workspaces/:wsId/tasks
-router.get("/:wsId/tasks", requireAuth, route((req, res) => {
-  if (!ensureOwnedWorkspace(res, req.params.wsId, req.userId)) return;
+router.get("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res) => {
   const tasks = db.prepare("SELECT * FROM tasks WHERE workspace_id = ?").all(req.params.wsId);
   res.json(tasks);
 }));
 
 // POST /api/workspaces/:wsId/tasks
-router.post("/:wsId/tasks", requireAuth, route((req, res) => {
-  if (!ensureOwnedWorkspace(res, req.params.wsId, req.userId)) return;
+router.post("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res) => {
   const {
     projectId, title, description = "", status = "Todo", priority = "Medium",
     assigneeId = "", dueDate = "", effort = 2,
@@ -35,9 +33,9 @@ router.post("/:wsId/tasks", requireAuth, route((req, res) => {
 router.patch("/:id", requireAuth, route((req, res) => {
   const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
   if (!task) return res.status(404).json({ error: "Not found" });
-  if (!ensureOwnedWorkspace(res, task.workspace_id, req.userId)) return;
+  if (!canAccessWorkspace(task.workspace_id, req.userId, req.userRole))
+    return res.status(403).json({ error: "Forbidden" });
 
-  // Map camelCase body keys to snake_case DB columns
   const colMap = {
     title: "title", description: "description", status: "status", priority: "priority",
     assigneeId: "assignee_id", dueDate: "due_date", effort: "effort", projectId: "project_id",
@@ -59,7 +57,8 @@ router.patch("/:id", requireAuth, route((req, res) => {
 router.delete("/:id", requireAuth, route((req, res) => {
   const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
   if (!task) return res.status(404).json({ error: "Not found" });
-  if (!ensureOwnedWorkspace(res, task.workspace_id, req.userId)) return;
+  if (!canAccessWorkspace(task.workspace_id, req.userId, req.userRole))
+    return res.status(403).json({ error: "Forbidden" });
 
   db.prepare("DELETE FROM tasks WHERE id = ?").run(req.params.id);
   logActivity(task.workspace_id, "Task deleted.");

@@ -1,14 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import SectionCard from "../components/SectionCard";
 import SimpleTable from "../components/SimpleTable";
-import ApiKeySettings from "../components/ApiKeySettings";
 import AiChatPanel from "../components/AiChatPanel";
-import { extractTasksWithClaude, generateDailyPlanWithClaude } from "../utils/claudeApi";
+import { extractTasksWithClaude, generateDailyPlanWithClaude, checkAiStatus } from "../utils/claudeApi";
 import { extractTasksFromText, generateDailyPlan } from "../utils/aiHelpers";
-import { useApiKey } from "../utils/useApiKey";
 
 export default function AiAssistantPage({ store }) {
-  const { apiKey, hasKey, setApiKey, clearApiKey } = useApiKey();
+  const [aiConfigured, setAiConfigured] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
   const [text, setText] = useState(
     "Discuss onboarding flow; implement signup API ASAP; prepare unit tests; design error states for failed login"
@@ -19,10 +18,18 @@ export default function AiAssistantPage({ store }) {
   const [loading, setLoading] = useState({ extract: false, plan: false });
   const [error, setError] = useState({ extract: null, plan: null });
 
+  // Check if the server has an AI key configured on mount
+  useEffect(() => {
+    checkAiStatus()
+      .then(setAiConfigured)
+      .catch(() => setAiConfigured(false))
+      .finally(() => setCheckingStatus(false));
+  }, []);
+
   const handleExtract = useCallback(async () => {
     if (!text.trim()) return;
 
-    if (!hasKey) {
+    if (!aiConfigured) {
       setDrafts(extractTasksFromText(text));
       return;
     }
@@ -30,7 +37,7 @@ export default function AiAssistantPage({ store }) {
     setLoading((prev) => ({ ...prev, extract: true }));
     setError((prev) => ({ ...prev, extract: null }));
     try {
-      const result = await extractTasksWithClaude(text, apiKey);
+      const result = await extractTasksWithClaude(text);
       setDrafts(result ?? extractTasksFromText(text));
     } catch (e) {
       setError((prev) => ({ ...prev, extract: e.message || "Task extraction failed" }));
@@ -38,10 +45,10 @@ export default function AiAssistantPage({ store }) {
     } finally {
       setLoading((prev) => ({ ...prev, extract: false }));
     }
-  }, [text, apiKey, hasKey]);
+  }, [text, aiConfigured]);
 
   const handleGeneratePlan = useCallback(async () => {
-    if (!hasKey) {
+    if (!aiConfigured) {
       setPlan(generateDailyPlan(store.scopedTasks));
       return;
     }
@@ -52,8 +59,7 @@ export default function AiAssistantPage({ store }) {
       const result = await generateDailyPlanWithClaude(
         store.scopedTasks,
         store.scopedProjects,
-        store.scopedMembers,
-        apiKey
+        store.scopedMembers
       );
       setPlan(result ?? generateDailyPlan(store.scopedTasks));
     } catch (e) {
@@ -62,23 +68,39 @@ export default function AiAssistantPage({ store }) {
     } finally {
       setLoading((prev) => ({ ...prev, plan: false }));
     }
-  }, [store.scopedTasks, store.scopedProjects, store.scopedMembers, apiKey, hasKey]);
+  }, [store.scopedTasks, store.scopedProjects, store.scopedMembers, aiConfigured]);
+
+  const statusLabel = checkingStatus
+    ? "Checking AI connection…"
+    : aiConfigured
+    ? "Groq / Llama 3 Connected (server-side)"
+    : "Heuristic mode — server GROQ_API_KEY not set";
 
   return (
-    <div className="page-grid">
-      <ApiKeySettings
-        apiKey={apiKey}
-        hasKey={hasKey}
-        onSave={setApiKey}
-        onClear={clearApiKey}
-      />
+    <div className="grid gap-4">
+      <SectionCard
+        title="AI Service Status"
+        subtitle={
+          <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${aiConfigured ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-500"}`}>
+            {statusLabel}
+          </span>
+        }
+      >
+        {!aiConfigured && !checkingStatus && (
+          <p className="text-slate-500" style={{ fontSize: "0.85rem" }}>
+            Set <code>GROQ_API_KEY</code> in the server <code>.env</code> file and restart the server to enable AI features.
+            Get a free key at{" "}
+            <a href="https://console.groq.com" target="_blank" rel="noreferrer">console.groq.com</a>.
+          </p>
+        )}
+      </SectionCard>
 
-      <div className="two-col-grid">
+      <div className="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
         <SectionCard
           title="Task Extraction"
-          subtitle={hasKey ? "Powered by Groq / Llama 3" : "Heuristic mode (no API key)"}
+          subtitle={aiConfigured ? "Powered by Groq / Llama 3" : "Heuristic mode"}
         >
-          <div className="form-grid">
+          <div className="grid gap-3">
             <textarea rows="5" value={text} onChange={(e) => setText(e.target.value)} />
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               <select
@@ -93,11 +115,11 @@ export default function AiAssistantPage({ store }) {
                   </option>
                 ))}
               </select>
-              <button className="secondary-btn" onClick={handleExtract} disabled={loading.extract}>
+              <button className="bg-slate-200 text-slate-900 rounded-xl px-4 py-2 hover:bg-slate-300 transition" onClick={handleExtract} disabled={loading.extract}>
                 {loading.extract ? "Analyzing…" : "Extract Tasks"}
               </button>
               <button
-                className="primary-btn"
+                className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
                 disabled={!selectedProjectId || !drafts.length}
                 onClick={() => {
                   if (!selectedProjectId || !drafts.length) return;
@@ -109,7 +131,7 @@ export default function AiAssistantPage({ store }) {
               </button>
             </div>
           </div>
-          {error.extract && <p className="inline-error">{error.extract}</p>}
+          {error.extract && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.extract}</p>}
           <SimpleTable
             columns={[
               { key: "title", label: "Task Title" },
@@ -123,14 +145,14 @@ export default function AiAssistantPage({ store }) {
 
         <SectionCard
           title="Daily Plan Suggestions"
-          subtitle={hasKey ? "Powered by Groq / Llama 3" : "Heuristic mode (no API key)"}
+          subtitle={aiConfigured ? "Powered by Groq / Llama 3" : "Heuristic mode"}
         >
           <div style={{ marginBottom: "1rem" }}>
-            <button className="secondary-btn" onClick={handleGeneratePlan} disabled={loading.plan}>
+            <button className="bg-slate-200 text-slate-900 rounded-xl px-4 py-2 hover:bg-slate-300 transition" onClick={handleGeneratePlan} disabled={loading.plan}>
               {loading.plan ? "Generating…" : "Generate Today's Plan"}
             </button>
           </div>
-          {error.plan && <p className="inline-error">{error.plan}</p>}
+          {error.plan && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.plan}</p>}
           <SimpleTable
             columns={[
               { key: "rank", label: "Rank" },
@@ -145,12 +167,14 @@ export default function AiAssistantPage({ store }) {
 
       <SectionCard
         title="AI Chat Assistant"
-        subtitle={hasKey ? "Chat with Llama 3 about your workspace" : "Configure an API key above to enable"}
+        subtitle={aiConfigured ? "Chat with Llama 3 about your workspace" : "Configure server AI key to enable"}
       >
-        {hasKey ? (
-          <AiChatPanel apiKey={apiKey} store={store} />
+        {aiConfigured ? (
+          <AiChatPanel store={store} />
         ) : (
-          <p className="empty-label">Please configure a Claude API key above to enable the chat assistant.</p>
+          <p className="text-slate-400 text-sm py-2">
+            Set <code>GROQ_API_KEY</code> in the server <code>.env</code> file to enable the chat assistant.
+          </p>
         )}
       </SectionCard>
     </div>

@@ -11,8 +11,8 @@ export default function DashboardPage({ store }) {
   }));
 
   return (
-    <div className="page-grid">
-      <div className="metrics-grid">
+    <div className="grid gap-4">
+      <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
         <MetricCard label="Projects" value={store.analytics.totalProjects} />
         <MetricCard label="Tasks" value={store.analytics.totalTasks} />
         <MetricCard label="Completion" value={`${store.analytics.completionRate}%`} tone="success" />
@@ -34,11 +34,11 @@ export default function DashboardPage({ store }) {
         />
       </SectionCard>
 
-      <div className="two-col-grid">
+      <div className="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
         <SectionCard title="Task Status Breakdown" subtitle="A quick snapshot of workflow distribution">
-          <div className="status-list">
+          <div className="grid gap-3">
             {statusRows.map((row) => (
-              <div key={row.status} className="status-row">
+              <div key={row.status} className="flex justify-between gap-4 p-3 rounded-xl bg-slate-50">
                 <span>{row.status}</span>
                 <strong>{row.count}</strong>
               </div>
@@ -47,9 +47,9 @@ export default function DashboardPage({ store }) {
         </SectionCard>
 
         <SectionCard title="Recent Activity" subtitle="Latest changes inside this workspace">
-          <ul className="activity-list compact-list">
+          <ul className="grid gap-3 list-none p-0 m-0">
             {store.scopedActivities.slice(0, 6).map((activity) => (
-              <li key={activity.id}>
+              <li key={activity.id} className="flex justify-between gap-4 p-2 rounded-xl bg-slate-50 items-start">
                 <strong>{new Date(activity.createdAt).toLocaleString()}</strong>
                 <span>{activity.message}</span>
               </li>

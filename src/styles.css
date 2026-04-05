@@ -1,21 +1,25 @@
-:root {
-  color-scheme: light;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #111827;
-  background: #f4f7fb;
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: light;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #111827;
+    background: #f4f7fb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f4f7fb; }
+  a { color: inherit; text-decoration: none; }
+  button, input, select, textarea {
+    font: inherit;
+    border: 1px solid #d0d7e2;
+    border-radius: 12px;
+    padding: 0.8rem 0.9rem;
+    background: white;
+  }
+  textarea { width: 100%; resize: vertical; }
+  button { cursor: pointer; }
 }
-* { box-sizing: border-box; }
-body { margin: 0; background: #f4f7fb; }
-a { color: inherit; text-decoration: none; }
-button, input, select, textarea {
-  font: inherit;
-  border: 1px solid #d0d7e2;
-  border-radius: 12px;
-  padding: 0.8rem 0.9rem;
-  background: white;
-}
-textarea { width: 100%; resize: vertical; }
-button { cursor: pointer; }
 .app-shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
 .sidebar {
   padding: 1.5rem;

@@ -57,7 +57,7 @@ export default function CalendarPage({ store }) {
         .map((task) => {
           const dueDate = parseISO(task.dueDate);
           const project = store.scopedProjects.find((item) => item.id === task.projectId);
-          const assignee = store.scopedMembers.find((item) => item.id === task.assigneeId);
+          const assignee = store.scopedMembers.find((item) => (item.userId || item.id) === task.assigneeId);
 
           return {
             ...task,

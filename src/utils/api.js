@@ -1,7 +1,7 @@
 // Fetch wrapper: prepends /api, attaches JWT from localStorage, throws on non-2xx
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem("taskpilot-token");
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`/api/v1${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

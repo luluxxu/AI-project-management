@@ -23,6 +23,7 @@ const emptyTask = {
 };
 
 export default function ProjectsPage({ store }) {
+  const teamName = store.activeWorkspace?.name || "Current team";
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [taskForm, setTaskForm] = useState({ ...emptyTask, projectId: store.scopedProjects[0]?.id || "" });
   const [selectedProjectId, setSelectedProjectId] = useState(store.scopedProjects[0]?.id || "all");
@@ -35,7 +36,7 @@ export default function ProjectsPage({ store }) {
   return (
     <div className="page-grid">
       <div className="two-col-grid">
-        <SectionCard title="Create Project" subtitle="Add a new project to the current workspace">
+        <SectionCard title="Create Project" subtitle={`Add a new project for ${teamName}`}>
           <div className="form-grid">
             <input placeholder="Project name" value={projectForm.name} onChange={(e) => setProjectForm((prev) => ({ ...prev, name: e.target.value }))} />
             <input placeholder="Description" value={projectForm.description} onChange={(e) => setProjectForm((prev) => ({ ...prev, description: e.target.value }))} />
@@ -66,7 +67,7 @@ export default function ProjectsPage({ store }) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Create Task" subtitle="Capture and assign project tasks">
+        <SectionCard title="Create Task" subtitle={`Capture shared tasks for ${teamName}`}>
           <div className="form-grid">
             <select value={taskForm.projectId} onChange={(e) => setTaskForm((prev) => ({ ...prev, projectId: e.target.value }))}>
               <option value="">Choose project</option>
@@ -112,6 +113,7 @@ export default function ProjectsPage({ store }) {
         <SimpleTable
           columns={[
             { key: "name", label: "Name" },
+            { key: "team", label: "Team", render: () => teamName },
             { key: "status", label: "Status", render: (row) => (
               <select value={row.status} onChange={(e) => store.updateProject(row.id, { status: e.target.value })}>
                 <option>Planning</option><option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option>
@@ -140,6 +142,7 @@ export default function ProjectsPage({ store }) {
         <SimpleTable
           columns={[
             { key: "title", label: "Task" },
+            { key: "team", label: "Team", render: () => teamName },
             { key: "status", label: "Status", render: (row) => (
               <select value={row.status} onChange={(e) => store.updateTask(row.id, { status: e.target.value })}>
                 <option>Todo</option><option>In Progress</option><option>Done</option>

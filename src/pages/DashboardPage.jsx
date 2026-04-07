@@ -9,6 +9,10 @@ export default function DashboardPage({ store }) {
     ...project,
     tasks: store.scopedTasks.filter((task) => task.projectId === project.id).length,
   }));
+  const isFreshWorkspace =
+    store.scopedProjects.length === 0 &&
+    store.scopedTasks.length === 0 &&
+    store.scopedMembers.length <= 1;
 
   return (
     <div className="page-grid">
@@ -19,6 +23,14 @@ export default function DashboardPage({ store }) {
         <MetricCard label="Overdue" value={store.analytics.overdue} tone={store.analytics.overdue ? "danger" : "default"} />
         <MetricCard label="Team Size" value={store.analytics.teamSize} />
       </div>
+
+      {isFreshWorkspace ? (
+        <SectionCard title="Team Created" subtitle="Your new workspace is ready">
+          <div className="empty-state">
+            This team is empty right now. Invite members from the Team page, then create your first project and task from the Projects page.
+          </div>
+        </SectionCard>
+      ) : null}
 
       <SectionCard title="Project Overview" subtitle="Current workspace projects and progress">
         <SimpleTable

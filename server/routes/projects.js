@@ -2,20 +2,20 @@ import { Router } from "express";
 import db from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
-import { ensureOwnedWorkspace, logActivity, uid } from "../utils/workspace.js";
+import { ensureWorkspaceAccess, logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
 
 // GET /api/workspaces/:wsId/projects
 router.get("/:wsId/projects", requireAuth, route((req, res) => {
-  if (!ensureOwnedWorkspace(res, req.params.wsId, req.userId)) return;
+  if (!ensureWorkspaceAccess(res, req.params.wsId, req.userId)) return;
   const projects = db.prepare("SELECT * FROM projects WHERE workspace_id = ?").all(req.params.wsId);
   res.json(projects);
 }));
 
 // POST /api/workspaces/:wsId/projects
 router.post("/:wsId/projects", requireAuth, route((req, res) => {
-  if (!ensureOwnedWorkspace(res, req.params.wsId, req.userId)) return;
+  if (!ensureWorkspaceAccess(res, req.params.wsId, req.userId)) return;
   const { name, description = "", status = "Planning", priority = "Medium", startDate = "", endDate = "" } = req.body;
   if (!name) return res.status(400).json({ error: "name is required" });
 
@@ -32,7 +32,7 @@ router.post("/:wsId/projects", requireAuth, route((req, res) => {
 router.patch("/:id", requireAuth, route((req, res) => {
   const project = db.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
   if (!project) return res.status(404).json({ error: "Not found" });
-  if (!ensureOwnedWorkspace(res, project.workspace_id, req.userId)) return;
+  if (!ensureWorkspaceAccess(res, project.workspace_id, req.userId)) return;
 
   const fields = ["name", "description", "status", "priority", "start_date", "end_date"];
   const updates = [];
@@ -54,7 +54,7 @@ router.patch("/:id", requireAuth, route((req, res) => {
 router.delete("/:id", requireAuth, route((req, res) => {
   const project = db.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
   if (!project) return res.status(404).json({ error: "Not found" });
-  if (!ensureOwnedWorkspace(res, project.workspace_id, req.userId)) return;
+  if (!ensureWorkspaceAccess(res, project.workspace_id, req.userId)) return;
 
   db.prepare("DELETE FROM projects WHERE id = ?").run(req.params.id);
   logActivity(project.workspace_id, "Project deleted.");

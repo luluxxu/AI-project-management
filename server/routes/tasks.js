@@ -2,20 +2,20 @@ import { Router } from "express";
 import db from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
-import { ensureOwnedWorkspace, logActivity, uid } from "../utils/workspace.js";
+import { ensureWorkspaceAccess, logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
 
 // GET /api/workspaces/:wsId/tasks
 router.get("/:wsId/tasks", requireAuth, route((req, res) => {
-  if (!ensureOwnedWorkspace(res, req.params.wsId, req.userId)) return;
+  if (!ensureWorkspaceAccess(res, req.params.wsId, req.userId)) return;
   const tasks = db.prepare("SELECT * FROM tasks WHERE workspace_id = ?").all(req.params.wsId);
   res.json(tasks);
 }));
 
 // POST /api/workspaces/:wsId/tasks
 router.post("/:wsId/tasks", requireAuth, route((req, res) => {
-  if (!ensureOwnedWorkspace(res, req.params.wsId, req.userId)) return;
+  if (!ensureWorkspaceAccess(res, req.params.wsId, req.userId)) return;
   const {
     projectId, title, description = "", status = "Todo", priority = "Medium",
     assigneeId = "", dueDate = "", effort = 2,
@@ -35,7 +35,7 @@ router.post("/:wsId/tasks", requireAuth, route((req, res) => {
 router.patch("/:id", requireAuth, route((req, res) => {
   const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
   if (!task) return res.status(404).json({ error: "Not found" });
-  if (!ensureOwnedWorkspace(res, task.workspace_id, req.userId)) return;
+  if (!ensureWorkspaceAccess(res, task.workspace_id, req.userId)) return;
 
   // Map camelCase body keys to snake_case DB columns
   const colMap = {
@@ -59,7 +59,7 @@ router.patch("/:id", requireAuth, route((req, res) => {
 router.delete("/:id", requireAuth, route((req, res) => {
   const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
   if (!task) return res.status(404).json({ error: "Not found" });
-  if (!ensureOwnedWorkspace(res, task.workspace_id, req.userId)) return;
+  if (!ensureWorkspaceAccess(res, task.workspace_id, req.userId)) return;
 
   db.prepare("DELETE FROM tasks WHERE id = ?").run(req.params.id);
   logActivity(task.workspace_id, "Task deleted.");

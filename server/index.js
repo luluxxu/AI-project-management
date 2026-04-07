@@ -8,6 +8,7 @@ import projectRoutes    from "./routes/projects.js";
 import taskRoutes       from "./routes/tasks.js";
 import memberRoutes     from "./routes/members.js";
 import activityRoutes   from "./routes/activities.js";
+import invitationRoutes from "./routes/invitations.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 dotenv.config();
@@ -25,6 +26,7 @@ app.use("/api/projects",   projectRoutes);
 app.use("/api/tasks",      taskRoutes);
 app.use("/api/members",    memberRoutes);
 app.use("/api/activities", activityRoutes);
+app.use("/api/invitations", invitationRoutes);
 
 app.get("/", (_, res) => {
   res.json({

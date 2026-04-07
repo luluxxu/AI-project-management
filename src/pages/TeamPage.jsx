@@ -3,24 +3,45 @@ import SectionCard from "../components/SectionCard";
 import SimpleTable from "../components/SimpleTable";
 
 export default function TeamPage({ store }) {
-  const [form, setForm] = useState({ name: "", email: "", role: "Member" });
+  const [form, setForm] = useState({ email: "", role: "Member" });
+  const [inviteError, setInviteError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleAddMember = async () => {
+    const email = form.email.trim();
+    if (!email) return;
+
+    setInviteError("");
+    setIsSubmitting(true);
+
+    try {
+      await store.addMember({ email, role: form.role });
+      setForm({ email: "", role: "Member" });
+    } catch (error) {
+      setInviteError(error.message || "Unable to add member.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="page-grid">
-      <SectionCard title="Invite Member" subtitle="Local demo member management">
+      <SectionCard title="Invite Member" subtitle="Only users who already registered can join this workspace">
         <div className="form-grid">
-          <input placeholder="Name" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
-          <input placeholder="Email" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
+          <input
+            placeholder="Registered user email"
+            value={form.email}
+            onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+          />
           <select value={form.role} onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}>
             <option>Owner</option>
             <option>Admin</option>
             <option>Member</option>
           </select>
-          <button className="primary-btn" onClick={() => {
-            if (!form.name.trim() || !form.email.trim()) return;
-            store.addMember(form);
-            setForm({ name: "", email: "", role: "Member" });
-          }}>Add Member</button>
+          {inviteError ? <p className="inline-error">{inviteError}</p> : null}
+          <button className="primary-btn" disabled={isSubmitting || !form.email.trim()} onClick={handleAddMember}>
+            {isSubmitting ? "Checking..." : "Add Member"}
+          </button>
         </div>
       </SectionCard>
 

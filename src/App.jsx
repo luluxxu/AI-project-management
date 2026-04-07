@@ -94,6 +94,10 @@ function AuthenticatedApp() {
           </div>
         </header>
 
+        {store.error ? (
+          <div className="inline-error">{store.error}</div>
+        ) : null}
+
         <Routes>
           <Route path="/" element={<DashboardPage store={store} />} />
           <Route path="/projects" element={<ProjectsPage store={store} />} />

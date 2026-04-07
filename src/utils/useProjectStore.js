@@ -23,6 +23,8 @@ export function useProjectStore() {
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [invitations, setInvitations] = useState([]);
+  const [teamInvitations, setTeamInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -50,6 +52,12 @@ export function useProjectStore() {
 
   // --- Load workspace data whenever the active workspace changes ---
   useEffect(() => {
+    apiFetch("/invitations")
+      .then((list) => setInvitations(list.map(norm)))
+      .catch((e) => setError(e.message));
+  }, []);
+
+  useEffect(() => {
     if (!activeWorkspaceId) return;
     Promise.all([
       apiFetch(`/projects/${activeWorkspaceId}/projects`),
@@ -66,10 +74,17 @@ export function useProjectStore() {
       .catch((e) => setError(e.message));
   }, [activeWorkspaceId]);
 
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    apiFetch(`/workspaces/${activeWorkspaceId}/invitations`)
+      .then((list) => setTeamInvitations(list.map(norm)))
+      .catch(() => setTeamInvitations([]));
+  }, [activeWorkspaceId]);
+
   // Build the same `data` shape the pages expect (via store.data.workspaces etc.)
   const data = useMemo(
-    () => ({ workspaces, projects, tasks, members, activities, activeWorkspaceId }),
-    [workspaces, projects, tasks, members, activities, activeWorkspaceId]
+    () => ({ workspaces, projects, tasks, members, activities, invitations, teamInvitations, activeWorkspaceId }),
+    [workspaces, projects, tasks, members, activities, invitations, teamInvitations, activeWorkspaceId]
   );
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0];
@@ -81,6 +96,9 @@ export function useProjectStore() {
   const scopedMembers = members.filter((m) => m.workspaceId === resolvedId);
   const scopedActivities = [...activities]
     .filter((a) => a.workspaceId === resolvedId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const scopedInvitations = [...teamInvitations]
+    .filter((invite) => invite.workspaceId === resolvedId)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const analytics = useMemo(
@@ -110,16 +128,23 @@ export function useProjectStore() {
     setTasks([]);
     setMembers([]);
     setActivities([]);
+    setTeamInvitations([]);
   };
 
   const createWorkspace = async () => {
     const name = promptValue("Workspace name:", "New Workspace");
     if (!name) return;
-    const ws = norm(
-      await apiFetch("/workspaces", { method: "POST", body: JSON.stringify({ name }) })
-    );
-    setWorkspaces((prev) => [...prev, ws]);
-    setActiveWorkspace(ws.id);
+    setError(null);
+    try {
+      const ws = norm(
+        await apiFetch("/workspaces", { method: "POST", body: JSON.stringify({ name }) })
+      );
+      setWorkspaces((prev) => [...prev, ws]);
+      setActiveWorkspace(ws.id);
+    } catch (e) {
+      setError(e.message || "Unable to create workspace.");
+      throw e;
+    }
   };
 
   // --- Project actions ---
@@ -183,14 +208,15 @@ export function useProjectStore() {
 
   // --- Member actions ---
   const addMember = async (member) => {
-    const m = norm(
-      await apiFetch(`/members/${resolvedId}/members`, {
+    const invite = norm(
+      await apiFetch(`/workspaces/${resolvedId}/invitations`, {
         method: "POST",
         body: JSON.stringify(member),
       })
     );
-    setMembers((prev) => [...prev, m]);
-    logLocalActivity(`Member '${member.name}' added.`);
+    setTeamInvitations((prev) => [invite, ...prev]);
+    logLocalActivity(`Invitation sent to '${invite.invitedName}'.`);
+    return invite;
   };
 
   const updateMember = async (memberId, patch) => {
@@ -202,6 +228,39 @@ export function useProjectStore() {
     );
     setMembers((prev) => prev.map((x) => (x.id === memberId ? m : x)));
     logLocalActivity("Member updated.");
+  };
+
+  const removeMember = async (memberId) => {
+    await apiFetch(`/members/${memberId}`, { method: "DELETE" });
+    setMembers((prev) => prev.filter((member) => member.id !== memberId));
+    logLocalActivity("Member removed.");
+  };
+
+  const respondToInvitation = async (invitationId, action) => {
+    const response = norm(
+      await apiFetch(`/invitations/${invitationId}/respond`, {
+        method: "POST",
+        body: JSON.stringify({ action }),
+      })
+    );
+
+    setInvitations((prev) =>
+      prev.map((invite) => (invite.id === invitationId ? { ...invite, ...response } : invite))
+    );
+
+    const nextWorkspaces = await apiFetch("/workspaces");
+    setWorkspaces(nextWorkspaces.map(norm));
+
+    if (action === "accept") {
+      const allInvitations = await apiFetch("/invitations");
+      setInvitations(allInvitations.map(norm));
+
+      if (!resolvedId && nextWorkspaces.length > 0) {
+        setActiveWorkspace(norm(nextWorkspaces[0]).id);
+      }
+    }
+
+    return response;
   };
 
   // Import multiple AI-drafted tasks into the active project
@@ -238,6 +297,9 @@ export function useProjectStore() {
     scopedTasks,
     scopedMembers,
     scopedActivities,
+    scopedInvitations,
+    invitations,
+    teamInvitations,
     analytics,
     loading,
     error,
@@ -251,6 +313,8 @@ export function useProjectStore() {
     deleteTask,
     addMember,
     updateMember,
+    removeMember,
+    respondToInvitation,
     importDraftTasks,
     resetDemoData,
   };

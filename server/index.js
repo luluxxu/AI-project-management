@@ -8,6 +8,7 @@ import projectRoutes    from "./routes/projects.js";
 import taskRoutes       from "./routes/tasks.js";
 import memberRoutes     from "./routes/members.js";
 import activityRoutes   from "./routes/activities.js";
+import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 dotenv.config();
 
@@ -35,6 +36,9 @@ app.get("/", (_, res) => {
 
 // Simple health check
 app.get("/api/health", (_, res) => res.json({ ok: true }));
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`TaskPilot API running on http://localhost:${PORT}`);

@@ -25,6 +25,14 @@ app.use("/api/tasks",      taskRoutes);
 app.use("/api/members",    memberRoutes);
 app.use("/api/activities", activityRoutes);
 
+app.get("/", (_, res) => {
+  res.json({
+    ok: true,
+    message: "TaskPilot API is running.",
+    health: "/api/health",
+  });
+});
+
 // Simple health check
 app.get("/api/health", (_, res) => res.json({ ok: true }));
 

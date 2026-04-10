@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Dependencies
 node_modules/
 
@@ -35,14 +34,3 @@ server/*.db-shm
 
 # Claude Code
 .claude/
-=======
-node_modules/
-dist/
-.env
-.DS_Store
-
-# SQLite database files (generated at runtime, not committed)
-server/*.db
-server/*.db-wal
-server/*.db-shm
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66

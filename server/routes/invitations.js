@@ -6,7 +6,6 @@ import { logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
 
-// GET /api/invitations — list pending invitations for the current user
 router.get("/", requireAuth, route((req, res) => {
   const invitations = db.prepare(`
     SELECT i.*, w.name AS workspace_name, inviter.name AS invited_by_name
@@ -19,7 +18,6 @@ router.get("/", requireAuth, route((req, res) => {
   res.json(invitations);
 }));
 
-// POST /api/invitations/:id/respond — accept or reject a pending invitation
 router.post("/:id/respond", requireAuth, route((req, res) => {
   const { action } = req.body;
   if (!["accept", "reject"].includes(action)) {
@@ -44,12 +42,9 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
     const existingMember = db.prepare(
       "SELECT id FROM members WHERE workspace_id = ? AND user_id = ?"
     ).get(invitation.workspace_id, req.userId);
-<<<<<<< HEAD
     const existingWorkspaceMember = db.prepare(
       "SELECT id FROM workspace_members WHERE workspace_id = ? AND user_id = ?"
     ).get(invitation.workspace_id, req.userId);
-=======
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
     if (!existingMember) {
       db.prepare(
@@ -63,7 +58,7 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
         invitation.invited_email
       );
     }
-<<<<<<< HEAD
+
     if (!existingWorkspaceMember) {
       db.prepare(
         "INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)"
@@ -75,8 +70,6 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
         respondedAt
       );
     }
-=======
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
     logActivity(invitation.workspace_id, `Invitation accepted by '${invitation.invited_name}'.`);
   } else {

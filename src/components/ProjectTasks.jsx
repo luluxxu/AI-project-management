@@ -1,6 +1,13 @@
 import { format } from "date-fns";
 import toast from "react-hot-toast";
+<<<<<<< HEAD
 import { useState, useMemo } from "react";
+=======
+import { useDispatch } from "react-redux";
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { deleteTask, updateTask } from "../features/workspaceSlice";
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 import { Bug, CalendarIcon, GitCommit, MessageSquare, Square, Trash, XIcon, Zap } from "lucide-react";
 
 const typeIcons = {
@@ -12,12 +19,23 @@ const typeIcons = {
 };
 
 const priorityTexts = {
+<<<<<<< HEAD
     Low: { background: "bg-red-100 dark:bg-red-950", prioritycolor: "text-red-600 dark:text-red-400" },
     Medium: { background: "bg-blue-100 dark:bg-blue-950", prioritycolor: "text-blue-600 dark:text-blue-400" },
     High: { background: "bg-emerald-100 dark:bg-emerald-950", prioritycolor: "text-emerald-600 dark:text-emerald-400" },
 };
 
 const ProjectTasks = ({ tasks, store }) => {
+=======
+    LOW: { background: "bg-red-100 dark:bg-red-950", prioritycolor: "text-red-600 dark:text-red-400" },
+    MEDIUM: { background: "bg-blue-100 dark:bg-blue-950", prioritycolor: "text-blue-600 dark:text-blue-400" },
+    HIGH: { background: "bg-emerald-100 dark:bg-emerald-950", prioritycolor: "text-emerald-600 dark:text-emerald-400" },
+};
+
+const ProjectTasks = ({ tasks }) => {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     const [selectedTasks, setSelectedTasks] = useState([]);
 
     const [filters, setFilters] = useState({
@@ -52,16 +70,33 @@ const ProjectTasks = ({ tasks, store }) => {
     const handleStatusChange = async (taskId, newStatus) => {
         try {
             toast.loading("Updating status...");
+<<<<<<< HEAD
             await store.updateTask(taskId, { status: newStatus });
             toast.dismiss();
             toast.success("Task status updated successfully");
         } catch (error) {
             toast.dismiss();
             toast.error(error.message || "Failed to update status");
+=======
+
+            //  Simulate API call
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            let updatedTask = structuredClone(tasks.find((t) => t.id === taskId));
+            updatedTask.status = newStatus;
+            dispatch(updateTask(updatedTask));
+
+            toast.dismissAll();
+            toast.success("Task status updated successfully");
+        } catch (error) {
+            toast.dismissAll();
+            toast.error(error?.response?.data?.message || error.message);
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
         }
     };
 
     const handleDelete = async () => {
+<<<<<<< HEAD
         const confirm = window.confirm("Are you sure you want to delete the selected tasks?");
         if (!confirm) return;
 
@@ -76,6 +111,24 @@ const ProjectTasks = ({ tasks, store }) => {
         } catch (error) {
             toast.dismiss();
             toast.error(error.message || "Failed to delete tasks");
+=======
+        try {
+            const confirm = window.confirm("Are you sure you want to delete the selected tasks?");
+            if (!confirm) return;
+
+            toast.loading("Deleting tasks...");
+
+            //  Simulate API call
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            dispatch(deleteTask(selectedTasks));
+
+            toast.dismissAll();
+            toast.success("Tasks deleted successfully");
+        } catch (error) {
+            toast.dismissAll();
+            toast.error(error?.response?.data?.message || error.message);
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
         }
     };
 
@@ -87,9 +140,15 @@ const ProjectTasks = ({ tasks, store }) => {
                     const options = {
                         status: [
                             { label: "All Statuses", value: "" },
+<<<<<<< HEAD
                             { label: "To Do", value: "Todo" },
                             { label: "In Progress", value: "In Progress" },
                             { label: "Done", value: "Done" },
+=======
+                            { label: "To Do", value: "TODO" },
+                            { label: "In Progress", value: "IN_PROGRESS" },
+                            { label: "Done", value: "DONE" },
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                         ],
                         type: [
                             { label: "All Types", value: "" },
@@ -101,9 +160,15 @@ const ProjectTasks = ({ tasks, store }) => {
                         ],
                         priority: [
                             { label: "All Priorities", value: "" },
+<<<<<<< HEAD
                             { label: "Low", value: "Low" },
                             { label: "Medium", value: "Medium" },
                             { label: "High", value: "High" },
+=======
+                            { label: "Low", value: "LOW" },
+                            { label: "Medium", value: "MEDIUM" },
+                            { label: "High", value: "HIGH" },
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                         ],
                         assignee: [
                             { label: "All Assignees", value: "" },
@@ -145,6 +210,10 @@ const ProjectTasks = ({ tasks, store }) => {
                                         <input onChange={() => selectedTasks.length > 1 ? setSelectedTasks([]) : setSelectedTasks(tasks.map((t) => t.id))} checked={selectedTasks.length === tasks.length} type="checkbox" className="size-3 accent-zinc-600 dark:accent-zinc-500" />
                                     </th>
                                     <th className="px-4 pl-0 py-3">Title</th>
+<<<<<<< HEAD
+=======
+                                    <th className="px-4 py-3">Type</th>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                     <th className="px-4 py-3">Priority</th>
                                     <th className="px-4 py-3">Status</th>
                                     <th className="px-4 py-3">Assignee</th>
@@ -154,21 +223,39 @@ const ProjectTasks = ({ tasks, store }) => {
                             <tbody>
                                 {filteredTasks.length > 0 ? (
                                     filteredTasks.map((task) => {
+<<<<<<< HEAD
                                         const { background, prioritycolor } = priorityTexts[task.priority] || {};
 
                                         return (
                                             <tr key={task.id} className=" border-t border-zinc-300 dark:border-zinc-800 group hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all" >
+=======
+                                        const { icon: Icon, color } = typeIcons[task.type] || {};
+                                        const { background, prioritycolor } = priorityTexts[task.priority] || {};
+
+                                        return (
+                                            <tr key={task.id} onClick={() => navigate(`/taskDetails?projectId=${task.projectId}&taskId=${task.id}`)} className=" border-t border-zinc-300 dark:border-zinc-800 group hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all cursor-pointer" >
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                                 <td onClick={e => e.stopPropagation()} className="pl-2 pr-1">
                                                     <input type="checkbox" className="size-3 accent-zinc-600 dark:accent-zinc-500" onChange={() => selectedTasks.includes(task.id) ? setSelectedTasks(selectedTasks.filter((i) => i !== task.id)) : setSelectedTasks((prev) => [...prev, task.id])} checked={selectedTasks.includes(task.id)} />
                                                 </td>
                                                 <td className="px-4 pl-0 py-2">{task.title}</td>
                                                 <td className="px-4 py-2">
+<<<<<<< HEAD
+=======
+                                                    <div className="flex items-center gap-2">
+                                                        {Icon && <Icon className={`size-4 ${color}`} />}
+                                                        <span className={`uppercase text-xs ${color}`}>{task.type}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-2">
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                                     <span className={`text-xs px-2 py-1 rounded ${background} ${prioritycolor}`}>
                                                         {task.priority}
                                                     </span>
                                                 </td>
                                                 <td onClick={e => e.stopPropagation()} className="px-4 py-2">
                                                     <select name="status" onChange={(e) => handleStatusChange(task.id, e.target.value)} value={task.status} className="group-hover:ring ring-zinc-100 outline-none px-2 pr-4 py-1 rounded text-sm text-zinc-900 dark:text-zinc-200 cursor-pointer" >
+<<<<<<< HEAD
                                                         <option value="Todo">To Do</option>
                                                         <option value="In Progress">In Progress</option>
                                                         <option value="Done">Done</option>
@@ -176,11 +263,27 @@ const ProjectTasks = ({ tasks, store }) => {
                                                 </td>
                                                 <td className="px-4 py-2">
                                                     {store?.scopedMembers?.find((m) => (m.userId || m.id) === task.assigneeId)?.name || "-"}
+=======
+                                                        <option value="TODO">To Do</option>
+                                                        <option value="IN_PROGRESS">In Progress</option>
+                                                        <option value="DONE">Done</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-4 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <img src={task.assignee?.image} className="size-5 rounded-full" alt="avatar" />
+                                                        {task.assignee?.name || "-"}
+                                                    </div>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                                 </td>
                                                 <td className="px-4 py-2">
                                                     <div className="flex items-center gap-1 text-zinc-600 dark:text-zinc-400">
                                                         <CalendarIcon className="size-4" />
+<<<<<<< HEAD
                                                         {task.dueDate ? format(new Date(task.dueDate), "dd MMMM") : "-"}
+=======
+                                                        {format(new Date(task.due_date), "dd MMMM")}
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                                     </div>
                                                 </td>
                                             </tr>
@@ -188,7 +291,11 @@ const ProjectTasks = ({ tasks, store }) => {
                                     })
                                 ) : (
                                     <tr>
+<<<<<<< HEAD
                                         <td colSpan="6" className="text-center text-zinc-500 dark:text-zinc-400 py-6">
+=======
+                                        <td colSpan="7" className="text-center text-zinc-500 dark:text-zinc-400 py-6">
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                             No tasks found for the selected filters.
                                         </td>
                                     </tr>
@@ -201,6 +308,10 @@ const ProjectTasks = ({ tasks, store }) => {
                     <div className="lg:hidden flex flex-col gap-4">
                         {filteredTasks.length > 0 ? (
                             filteredTasks.map((task) => {
+<<<<<<< HEAD
+=======
+                                const { icon: Icon, color } = typeIcons[task.type] || {};
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                 const { background, prioritycolor } = priorityTexts[task.priority] || {};
 
                                 return (
@@ -210,6 +321,14 @@ const ProjectTasks = ({ tasks, store }) => {
                                             <input type="checkbox" className="size-4 accent-zinc-600 dark:accent-zinc-500" onChange={() => selectedTasks.includes(task.id) ? setSelectedTasks(selectedTasks.filter((i) => i !== task.id)) : setSelectedTasks((prev) => [...prev, task.id])} checked={selectedTasks.includes(task.id)} />
                                         </div>
 
+<<<<<<< HEAD
+=======
+                                        <div className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
+                                            {Icon && <Icon className={`size-4 ${color}`} />}
+                                            <span className={`${color} uppercase`}>{task.type}</span>
+                                        </div>
+
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                         <div>
                                             <span className={`text-xs px-2 py-1 rounded ${background} ${prioritycolor}`}>
                                                 {task.priority}
@@ -219,19 +338,34 @@ const ProjectTasks = ({ tasks, store }) => {
                                         <div>
                                             <label className="text-zinc-600 dark:text-zinc-400 text-xs">Status</label>
                                             <select name="status" onChange={(e) => handleStatusChange(task.id, e.target.value)} value={task.status} className="w-full mt-1 bg-zinc-100 dark:bg-zinc-800 ring-1 ring-zinc-300 dark:ring-zinc-700 outline-none px-2 py-1 rounded text-sm text-zinc-900 dark:text-zinc-200" >
+<<<<<<< HEAD
                                                 <option value="Todo">To Do</option>
                                                 <option value="In Progress">In Progress</option>
                                                 <option value="Done">Done</option>
+=======
+                                                <option value="TODO">To Do</option>
+                                                <option value="IN_PROGRESS">In Progress</option>
+                                                <option value="DONE">Done</option>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                             </select>
                                         </div>
 
                                         <div className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+<<<<<<< HEAD
                                             {store?.scopedMembers?.find((m) => (m.userId || m.id) === task.assigneeId)?.name || "-"}
+=======
+                                            <img src={task.assignee?.image} className="size-5 rounded-full" alt="avatar" />
+                                            {task.assignee?.name || "-"}
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                         </div>
 
                                         <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
                                             <CalendarIcon className="size-4" />
+<<<<<<< HEAD
                                             {task.dueDate ? format(new Date(task.dueDate), "dd MMMM") : "-"}
+=======
+                                            {format(new Date(task.due_date), "dd MMMM")}
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                                         </div>
                                     </div>
                                 );

@@ -39,6 +39,7 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS tasks (
+<<<<<<< HEAD
     id            TEXT PRIMARY KEY,
     workspace_id  TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
     project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -51,6 +52,18 @@ db.exec(`
     effort        INTEGER DEFAULT 2,
     planned_start TEXT DEFAULT '',
     planned_end   TEXT DEFAULT ''
+=======
+    id           TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    project_id   TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title        TEXT NOT NULL,
+    description  TEXT DEFAULT '',
+    status       TEXT NOT NULL DEFAULT 'Todo' CHECK (status IN ('Todo', 'In Progress', 'Done')),
+    priority     TEXT NOT NULL DEFAULT 'Medium' CHECK (priority IN ('Low', 'Medium', 'High')),
+    assignee_id  TEXT DEFAULT '',
+    due_date     TEXT DEFAULT '',
+    effort       INTEGER DEFAULT 2
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   );
 
   CREATE TABLE IF NOT EXISTS members (
@@ -70,6 +83,7 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS invitations (
+<<<<<<< HEAD
     id              TEXT PRIMARY KEY,
     workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
     invited_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -98,6 +112,18 @@ db.exec(`
     status       TEXT NOT NULL DEFAULT 'Pending',
     created_at   TEXT NOT NULL,
     UNIQUE(workspace_id, user_id)
+=======
+    id             TEXT PRIMARY KEY,
+    workspace_id   TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    invited_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    invited_email  TEXT NOT NULL,
+    invited_name   TEXT NOT NULL,
+    role           TEXT NOT NULL DEFAULT 'Member' CHECK (role IN ('Owner', 'Admin', 'Member')),
+    status         TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Accepted', 'Rejected')),
+    invited_by_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at     TEXT NOT NULL,
+    responded_at   TEXT
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   );
 
   CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
@@ -106,8 +132,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
   CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
   CREATE INDEX IF NOT EXISTS idx_members_workspace_id ON members(workspace_id);
+<<<<<<< HEAD
   CREATE INDEX IF NOT EXISTS idx_members_user_id ON members(user_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_members_workspace_user_unique ON members(workspace_id, user_id);
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   CREATE INDEX IF NOT EXISTS idx_activities_workspace_id_created_at ON activities(workspace_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_invitations_workspace_id ON invitations(workspace_id);
   CREATE INDEX IF NOT EXISTS idx_invitations_invited_user_id_status ON invitations(invited_user_id, status);
@@ -115,11 +144,25 @@ db.exec(`
     ON invitations(workspace_id, invited_user_id, status);
 `);
 
+<<<<<<< HEAD
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'Member'"); } catch {}
 try { db.exec("ALTER TABLE tasks ADD COLUMN planned_start TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE tasks ADD COLUMN planned_end TEXT DEFAULT ''"); } catch {}
 try { db.exec("ALTER TABLE members ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE"); } catch {}
 
+=======
+const memberColumns = db.prepare("PRAGMA table_info(members)").all();
+if (!memberColumns.some((column) => column.name === "user_id")) {
+  db.exec("ALTER TABLE members ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE");
+}
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_members_user_id ON members(user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_members_workspace_user_unique ON members(workspace_id, user_id);
+`);
+
+// Backfill member.user_id from matching registered email for older databases.
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 db.prepare(`
   UPDATE members
   SET user_id = (
@@ -130,6 +173,30 @@ db.prepare(`
   WHERE user_id IS NULL OR user_id = ''
 `).run();
 
+<<<<<<< HEAD
+=======
+// Ensure every workspace owner also exists as an owner member record.
+db.prepare(`
+  INSERT INTO members (id, workspace_id, user_id, name, role, email)
+  SELECT
+    'm-' || substr(hex(randomblob(8)), 1, 8),
+    w.id,
+    u.id,
+    u.name,
+    'Owner',
+    u.email
+  FROM workspaces w
+  JOIN users u ON u.id = w.owner_id
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM members m
+    WHERE m.workspace_id = w.id
+      AND m.user_id = u.id
+  )
+`).run();
+
+// Enforce allowed values even on existing databases whose tables predate CHECK constraints.
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS validate_projects_before_insert
   BEFORE INSERT ON projects
@@ -210,6 +277,7 @@ db.exec(`
   END;
 `);
 
+<<<<<<< HEAD
 const ADMIN_EMAIL = "admin@example.com";
 const adminUser = db.prepare("SELECT id FROM users WHERE email = ?").get(ADMIN_EMAIL);
 if (!adminUser) {
@@ -260,3 +328,6 @@ db.prepare(`
 
 export default db;
 export { ADMIN_EMAIL };
+=======
+export default db;
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66

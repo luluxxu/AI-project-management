@@ -1,8 +1,15 @@
+<<<<<<< HEAD
 import { useCallback, useEffect, useMemo, useState } from "react";
 import SectionCard from "../components/SectionCard";
 import SimpleTable from "../components/SimpleTable";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../utils/api";
+=======
+import { useMemo, useState } from "react";
+import SectionCard from "../components/SectionCard";
+import SimpleTable from "../components/SimpleTable";
+import { useAuth } from "../context/AuthContext";
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
 export default function TeamPage({ store }) {
   const { user } = useAuth();
@@ -10,6 +17,7 @@ export default function TeamPage({ store }) {
   const [inviteError, setInviteError] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState("");
+<<<<<<< HEAD
   const [joinRequests, setJoinRequests] = useState([]);
 
   const workspaceRole =
@@ -19,11 +27,16 @@ export default function TeamPage({ store }) {
   const canManage = workspaceRole === "Owner" || workspaceRole === "Admin";
   const wsId = store.activeWorkspaceId;
 
+=======
+
+  const isOwner = store.activeWorkspace?.ownerId === user?.id || store.activeWorkspace?.currentRole === "Owner";
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   const receivedInvitations = useMemo(
     () => store.invitations.filter((invite) => invite.status === "Pending"),
     [store.invitations]
   );
 
+<<<<<<< HEAD
   const loadJoinRequests = useCallback(() => {
     if (!wsId || !canManage) {
       setJoinRequests([]);
@@ -39,6 +52,8 @@ export default function TeamPage({ store }) {
     loadJoinRequests();
   }, [loadJoinRequests]);
 
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   const handleInvite = async () => {
     const email = form.email.trim();
     if (!email) return;
@@ -64,6 +79,7 @@ export default function TeamPage({ store }) {
     }
   };
 
+<<<<<<< HEAD
   const handleJoinRequest = async (requestId, status) => {
     setActionLoadingId(requestId);
     try {
@@ -90,6 +106,15 @@ export default function TeamPage({ store }) {
     setActionLoadingId(identifier);
     try {
       await store.removeMember(identifier);
+=======
+  const handleRemoveMember = async (memberId) => {
+    const confirmed = window.confirm("Remove this member from the team?");
+    if (!confirmed) return;
+
+    setActionLoadingId(memberId);
+    try {
+      await store.removeMember(memberId);
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     } catch (error) {
       setInviteError(error.message || "Unable to remove member.");
     } finally {
@@ -99,7 +124,11 @@ export default function TeamPage({ store }) {
 
   return (
     <div className="page-grid">
+<<<<<<< HEAD
       <SectionCard title="My Invitations" subtitle="Accept or reject pending workspace invitations">
+=======
+      <SectionCard title="My Invitations" subtitle="Accept or reject pending team invitations">
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
         {receivedInvitations.length === 0 ? (
           <div className="empty-state">No pending invitations.</div>
         ) : (
@@ -135,18 +164,30 @@ export default function TeamPage({ store }) {
 
       <SectionCard
         title="Invite Member"
+<<<<<<< HEAD
         subtitle={canManage ? "Invite a registered user into this workspace" : "Only workspace owners and admins can invite members"}
+=======
+        subtitle={isOwner ? "Invite registered users into this team" : "Only the team owner can invite members"}
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
       >
         <div className="form-grid">
           <input
             placeholder="Registered user email"
             value={form.email}
+<<<<<<< HEAD
             disabled={!canManage}
+=======
+            disabled={!isOwner}
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
             onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
           />
           <select
             value={form.role}
+<<<<<<< HEAD
             disabled={!canManage}
+=======
+            disabled={!isOwner}
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
             onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
           >
             <option>Owner</option>
@@ -154,12 +195,17 @@ export default function TeamPage({ store }) {
             <option>Member</option>
           </select>
           {inviteError ? <p className="inline-error">{inviteError}</p> : null}
+<<<<<<< HEAD
           <button className="primary-btn" disabled={!canManage || inviteLoading || !form.email.trim()} onClick={handleInvite}>
+=======
+          <button className="primary-btn" disabled={!isOwner || inviteLoading || !form.email.trim()} onClick={handleInvite}>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
             {inviteLoading ? "Sending..." : "Send Invite"}
           </button>
         </div>
       </SectionCard>
 
+<<<<<<< HEAD
       {canManage && joinRequests.length > 0 ? (
         <SectionCard title="Pending Join Requests" subtitle="Users who have requested access to this workspace">
           <div className="calendar-list compact-list">
@@ -192,6 +238,8 @@ export default function TeamPage({ store }) {
         </SectionCard>
       ) : null}
 
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
       <SectionCard title="Team" subtitle="Shared team members for this workspace">
         <SimpleTable
           columns={[
@@ -203,6 +251,7 @@ export default function TeamPage({ store }) {
               render: (row) => (
                 <select
                   value={row.role}
+<<<<<<< HEAD
                   disabled={!canManage || row.role === "Owner" || row.userId === user?.id}
                   onChange={(e) => {
                     if (row.userId) {
@@ -211,6 +260,10 @@ export default function TeamPage({ store }) {
                       store.updateMember(row.id, { role: e.target.value });
                     }
                   }}
+=======
+                  disabled={!isOwner || row.role === "Owner"}
+                  onChange={(e) => store.updateMember(row.id, { role: e.target.value })}
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                 >
                   <option>Owner</option>
                   <option>Admin</option>
@@ -219,16 +272,20 @@ export default function TeamPage({ store }) {
               ),
             },
             {
+<<<<<<< HEAD
               key: "joinedAt",
               label: "Joined",
               render: (row) => (row.joinedAt ? new Date(row.joinedAt).toLocaleDateString() : "—"),
             },
             {
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
               key: "actions",
               label: "Actions",
               render: (row) =>
                 row.role === "Owner" ? (
                   "Owner"
+<<<<<<< HEAD
                 ) : row.userId === user?.id ? (
                   "You"
                 ) : (
@@ -236,6 +293,13 @@ export default function TeamPage({ store }) {
                     className="danger-btn"
                     disabled={!canManage || actionLoadingId === (row.userId || row.id)}
                     onClick={() => handleRemoveMember(row)}
+=======
+                ) : (
+                  <button
+                    className="danger-btn"
+                    disabled={!isOwner || actionLoadingId === row.id}
+                    onClick={() => handleRemoveMember(row.id)}
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                   >
                     Remove
                   </button>
@@ -246,10 +310,17 @@ export default function TeamPage({ store }) {
         />
       </SectionCard>
 
+<<<<<<< HEAD
       {canManage ? (
         <SectionCard title="Pending Team Invites" subtitle="Outstanding invitations for this workspace">
           {store.scopedInvitations.filter((invite) => invite.status === "Pending").length === 0 ? (
             <div className="empty-state">No pending invitations for this workspace.</div>
+=======
+      {isOwner ? (
+        <SectionCard title="Pending Team Invites" subtitle="Outstanding invitations for this team">
+          {store.scopedInvitations.filter((invite) => invite.status === "Pending").length === 0 ? (
+            <div className="empty-state">No pending invitations for this team.</div>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
           ) : (
             <div className="calendar-list compact-list">
               {store.scopedInvitations

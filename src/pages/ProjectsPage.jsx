@@ -90,7 +90,11 @@ export default function ProjectsPage({ store }) {
             <select value={taskForm.assigneeId} onChange={(e) => setTaskForm((prev) => ({ ...prev, assigneeId: e.target.value }))}>
               <option value="">Unassigned</option>
               {store.scopedMembers.map((member) => (
+<<<<<<< HEAD
                 <option key={member.userId || member.id} value={member.userId || member.id}>{member.name}</option>
+=======
+                <option key={member.id} value={member.id}>{member.name}</option>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
               ))}
             </select>
             <input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
@@ -114,6 +118,7 @@ export default function ProjectsPage({ store }) {
           columns={[
             { key: "name", label: "Name" },
             { key: "team", label: "Team", render: () => teamName },
+<<<<<<< HEAD
             {
               key: "status",
               label: "Status",
@@ -127,6 +132,13 @@ export default function ProjectsPage({ store }) {
                 </select>
               ),
             },
+=======
+            { key: "status", label: "Status", render: (row) => (
+              <select value={row.status} onChange={(e) => store.updateProject(row.id, { status: e.target.value })}>
+                <option>Planning</option><option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option>
+              </select>
+            ) },
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
             { key: "priority", label: "Priority" },
             { key: "endDate", label: "Deadline" },
             { key: "actions", label: "Actions", render: (row) => <button className="danger-btn" onClick={() => store.deleteProject(row.id)}>Delete</button> },
@@ -151,6 +163,7 @@ export default function ProjectsPage({ store }) {
           columns={[
             { key: "title", label: "Task" },
             { key: "team", label: "Team", render: () => teamName },
+<<<<<<< HEAD
             {
               key: "status",
               label: "Status",
@@ -169,6 +182,16 @@ export default function ProjectsPage({ store }) {
               label: "Assignee",
               render: (row) => store.scopedMembers.find((member) => (member.userId || member.id) === row.assigneeId)?.name || "Unassigned",
             },
+=======
+            { key: "status", label: "Status", render: (row) => (
+              <select value={row.status} onChange={(e) => store.updateTask(row.id, { status: e.target.value })}>
+                <option>Todo</option><option>In Progress</option><option>Done</option>
+              </select>
+            ) },
+            { key: "priority", label: "Priority" },
+            { key: "dueDate", label: "Due" },
+            { key: "assigneeId", label: "Assignee", render: (row) => store.scopedMembers.find((member) => member.id === row.assigneeId)?.name || "Unassigned" },
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
             { key: "actions", label: "Actions", render: (row) => <button className="danger-btn" onClick={() => store.deleteTask(row.id)}>Delete</button> },
           ]}
           rows={filteredTasks}

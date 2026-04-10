@@ -9,6 +9,7 @@ export function logActivity(workspaceId, message) {
 }
 
 export function getWorkspaceMembership(workspaceId, userId) {
+<<<<<<< HEAD
   if (!workspaceId || !userId) return null;
 
   const workspaceMember = db.prepare(`
@@ -27,6 +28,14 @@ export function getWorkspaceMembership(workspaceId, userId) {
       WHERE m.workspace_id = ? AND m.user_id = ?
     `).get(workspaceId, userId) || null
   );
+=======
+  return db.prepare(
+    `SELECT m.id, m.workspace_id, m.user_id, m.role, w.owner_id
+     FROM members m
+     JOIN workspaces w ON w.id = m.workspace_id
+     WHERE m.workspace_id = ? AND m.user_id = ?`
+  ).get(workspaceId, userId);
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 }
 
 export function ensureWorkspaceAccess(res, workspaceId, userId) {
@@ -41,12 +50,18 @@ export function ensureWorkspaceAccess(res, workspaceId, userId) {
 export function ensureWorkspaceOwner(res, workspaceId, userId) {
   const membership = ensureWorkspaceAccess(res, workspaceId, userId);
   if (!membership) return null;
+<<<<<<< HEAD
   if (!["Owner", "Admin"].includes(membership.role) && membership.owner_id !== userId) {
     res.status(403).json({ error: "Only a workspace owner or admin can perform this action." });
+=======
+  if (membership.role !== "Owner" && membership.owner_id !== userId) {
+    res.status(403).json({ error: "Only the team owner can perform this action." });
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     return null;
   }
   return membership;
 }
+<<<<<<< HEAD
 
 export function getOwnedWorkspace(workspaceId, userId) {
   return db.prepare("SELECT id FROM workspaces WHERE id = ? AND owner_id = ?").get(workspaceId, userId);
@@ -60,3 +75,5 @@ export function ensureOwnedWorkspace(res, workspaceId, userId) {
   }
   return workspace;
 }
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66

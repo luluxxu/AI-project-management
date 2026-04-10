@@ -12,12 +12,16 @@ import { useState } from "react";
 export default function ActionConfirmCard({ action, store, onConfirm, onDismiss }) {
   // Once confirmed, flip `done` to true to show a "Done" badge instead of buttons.
   const [done, setDone] = useState(false);
+<<<<<<< HEAD
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
   // Nothing to render if there's no action.
   if (!action) return null;
 
+<<<<<<< HEAD
   const handleConfirm = async () => {
     if (saving) return;
     setSaving(true);
@@ -42,6 +46,23 @@ export default function ActionConfirmCard({ action, store, onConfirm, onDismiss 
     } finally {
       setSaving(false);
     }
+=======
+  const handleConfirm = () => {
+    if (action.type === "CREATE_TASK") {
+      // Destructure the fields the AI provided in its payload.
+      const { title, priority, effort, description, projectId } = action.payload;
+      // importDraftTasks expects an array of draft objects + a target projectId.
+      store.importDraftTasks(
+        [{ title, priority: priority || "Medium", effort: effort || 3, description: description || "" }],
+        projectId || store.scopedProjects[0]?.id || "" // fall back to first project
+      );
+    } else if (action.type === "UPDATE_TASK_STATUS") {
+      const { taskId, newStatus } = action.payload;
+      store.updateTask(taskId, { status: newStatus });
+    }
+    setDone(true);
+    onConfirm?.(); // notify parent if it cares
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   };
 
   // Human-readable summary of what will happen when the user confirms.
@@ -61,16 +82,27 @@ export default function ActionConfirmCard({ action, store, onConfirm, onDismiss 
         <span className="action-card-done">Done</span>
       ) : (
         <div className="action-card-buttons">
+<<<<<<< HEAD
           <button className="primary-btn action-btn" onClick={handleConfirm} disabled={saving}>
             {saving ? "Applying..." : "Confirm"}
           </button>
           {/* Dismiss removes the card without touching the store. */}
           <button className="secondary-btn action-btn" onClick={onDismiss} disabled={saving}>
+=======
+          <button className="primary-btn action-btn" onClick={handleConfirm}>
+            Confirm
+          </button>
+          {/* Dismiss removes the card without touching the store. */}
+          <button className="secondary-btn action-btn" onClick={onDismiss}>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
             Dismiss
           </button>
         </div>
       )}
+<<<<<<< HEAD
       {error ? <p className="text-sm text-red-600 mt-2">{error}</p> : null}
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     </div>
   );
 }

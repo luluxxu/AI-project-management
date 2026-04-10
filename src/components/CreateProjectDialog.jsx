@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { XIcon } from "lucide-react";
+<<<<<<< HEAD
 import toast from "react-hot-toast";
 
 const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
@@ -10,12 +11,31 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
         priority: "Medium",
         startDate: "",
         endDate: "",
+=======
+import { useSelector } from "react-redux";
+
+const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
+
+    const { currentWorkspace } = useSelector((state) => state.workspace);
+
+    const [formData, setFormData] = useState({
+        name: "",
+        description: "",
+        status: "PLANNING",
+        priority: "MEDIUM",
+        start_date: "",
+        end_date: "",
+        team_members: [],
+        team_lead: "",
+        progress: 0,
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+<<<<<<< HEAD
         if (!formData.name.trim()) return;
 
         setIsSubmitting(true);
@@ -36,6 +56,13 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
         } finally {
             setIsSubmitting(false);
         }
+=======
+        
+    };
+
+    const removeTeamMember = (email) => {
+        setFormData((prev) => ({ ...prev, team_members: prev.team_members.filter(m => m !== email) }));
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     };
 
     if (!isDialogOpen) return null;
@@ -43,14 +70,24 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
     return (
         <div className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur flex items-center justify-center text-left z-50">
             <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 w-full max-w-lg text-zinc-900 dark:text-zinc-200 relative">
+<<<<<<< HEAD
                 <button className="absolute top-3 right-3 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200" onClick={() => setIsDialogOpen(false)}>
+=======
+                <button className="absolute top-3 right-3 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200" onClick={() => setIsDialogOpen(false)} >
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                     <XIcon className="size-5" />
                 </button>
 
                 <h2 className="text-xl font-medium mb-1">Create New Project</h2>
+<<<<<<< HEAD
                 {store?.activeWorkspace && (
                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
                         In workspace: <span className="text-blue-600 dark:text-blue-400">{store.activeWorkspace.name}</span>
+=======
+                {currentWorkspace && (
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                        In workspace: <span className="text-blue-600 dark:text-blue-400">{currentWorkspace.name}</span>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                     </p>
                 )}
 
@@ -71,21 +108,37 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm mb-1">Status</label>
+<<<<<<< HEAD
                             <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm">
                                 <option value="Planning">Planning</option>
                                 <option value="Active">Active</option>
                                 <option value="Completed">Completed</option>
                                 <option value="On Hold">On Hold</option>
                                 <option value="Cancelled">Cancelled</option>
+=======
+                            <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm" >
+                                <option value="PLANNING">Planning</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="COMPLETED">Completed</option>
+                                <option value="ON_HOLD">On Hold</option>
+                                <option value="CANCELLED">Cancelled</option>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                             </select>
                         </div>
 
                         <div>
                             <label className="block text-sm mb-1">Priority</label>
+<<<<<<< HEAD
                             <select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })} className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm">
                                 <option value="Low">Low</option>
                                 <option value="Medium">Medium</option>
                                 <option value="High">High</option>
+=======
+                            <select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })} className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm" >
+                                <option value="LOW">Low</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="HIGH">High</option>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                             </select>
                         </div>
                     </div>
@@ -94,6 +147,7 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm mb-1">Start Date</label>
+<<<<<<< HEAD
                             <input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm" />
                         </div>
                         <div>
@@ -108,6 +162,69 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
                             Cancel
                         </button>
                         <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded bg-gradient-to-br from-blue-500 to-blue-600 text-white dark:text-zinc-200">
+=======
+                            <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-sm mb-1">End Date</label>
+                            <input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} min={formData.start_date && new Date(formData.start_date).toISOString().split('T')[0]} className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm" />
+                        </div>
+                    </div>
+
+                    {/* Lead */}
+                    <div>
+                        <label className="block text-sm mb-1">Project Lead</label>
+                        <select value={formData.team_lead} onChange={(e) => setFormData({ ...formData, team_lead: e.target.value, team_members: e.target.value ? [...new Set([...formData.team_members, e.target.value])] : formData.team_members, })} className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm" >
+                            <option value="">No lead</option>
+                            {currentWorkspace?.members?.map((member) => (
+                                <option key={member.user.email} value={member.user.email}>
+                                    {member.user.email}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Team Members */}
+                    <div>
+                        <label className="block text-sm mb-1">Team Members</label>
+                        <select className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm"
+                            onChange={(e) => {
+                                if (e.target.value && !formData.team_members.includes(e.target.value)) {
+                                    setFormData((prev) => ({ ...prev, team_members: [...prev.team_members, e.target.value] }));
+                                }
+                            }}
+                        >
+                            <option value="">Add team members</option>
+                            {currentWorkspace?.members
+                                ?.filter((email) => !formData.team_members.includes(email))
+                                .map((member) => (
+                                    <option key={member.user.email} value={member.email}>
+                                        {member.user.email}
+                                    </option>
+                                ))}
+                        </select>
+
+                        {formData.team_members.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {formData.team_members.map((email) => (
+                                    <div key={email} className="flex items-center gap-1 bg-blue-200/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-md text-sm" >
+                                        {email}
+                                        <button type="button" onClick={() => removeTeamMember(email)} className="ml-1 hover:bg-blue-300/30 dark:hover:bg-blue-500/30 rounded" >
+                                            <XIcon className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex justify-end gap-3 pt-2 text-sm">
+                        <button type="button" onClick={() => setIsDialogOpen(false)} className="px-4 py-2 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800" >
+                            Cancel
+                        </button>
+                        <button disabled={isSubmitting || !currentWorkspace} className="px-4 py-2 rounded bg-gradient-to-br from-blue-500 to-blue-600 text-white dark:text-zinc-200" >
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                             {isSubmitting ? "Creating..." : "Create Project"}
                         </button>
                     </div>

@@ -1,11 +1,24 @@
 import { Router } from "express";
 import db from "../db.js";
+<<<<<<< HEAD
 import { requireAuth, requireWorkspaceAccess } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
 
 const router = Router();
 
 router.get("/:wsId/activities", requireAuth, requireWorkspaceAccess, route((req, res) => {
+=======
+import { requireAuth } from "../middleware/auth.js";
+import { route } from "../middleware/error.js";
+import { ensureWorkspaceAccess } from "../utils/workspace.js";
+
+const router = Router();
+
+// GET /api/workspaces/:wsId/activities — return recent activity log (newest first)
+router.get("/:wsId/activities", requireAuth, route((req, res) => {
+  if (!ensureWorkspaceAccess(res, req.params.wsId, req.userId)) return;
+
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   const activities = db.prepare(
     "SELECT * FROM activities WHERE workspace_id = ? ORDER BY created_at DESC LIMIT 100"
   ).all(req.params.wsId);

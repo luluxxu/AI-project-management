@@ -26,10 +26,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+<<<<<<< HEAD
   const isAdmin = user?.role === "Admin";
 
   return (
     <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated: !!token, isAdmin }}>
+=======
+  return (
+    <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated: !!token }}>
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
       {children}
     </AuthContext.Provider>
   );

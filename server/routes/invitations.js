@@ -44,9 +44,12 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
     const existingMember = db.prepare(
       "SELECT id FROM members WHERE workspace_id = ? AND user_id = ?"
     ).get(invitation.workspace_id, req.userId);
+<<<<<<< HEAD
     const existingWorkspaceMember = db.prepare(
       "SELECT id FROM workspace_members WHERE workspace_id = ? AND user_id = ?"
     ).get(invitation.workspace_id, req.userId);
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
     if (!existingMember) {
       db.prepare(
@@ -60,6 +63,7 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
         invitation.invited_email
       );
     }
+<<<<<<< HEAD
     if (!existingWorkspaceMember) {
       db.prepare(
         "INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)"
@@ -71,6 +75,8 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
         respondedAt
       );
     }
+=======
+>>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
     logActivity(invitation.workspace_id, `Invitation accepted by '${invitation.invited_name}'.`);
   } else {

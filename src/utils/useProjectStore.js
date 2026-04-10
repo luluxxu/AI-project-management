@@ -37,9 +37,10 @@ export function useProjectStore() {
       .then((list) => {
         const normalized = list.map(norm);
         setWorkspaces(normalized);
-        // Auto-select first workspace if nothing stored
+        // Auto-select first workspace, or fix stale localStorage reference
         const stored = localStorage.getItem("taskpilot-active-ws");
-        if (!stored && normalized.length > 0) {
+        const match = stored && normalized.find((w) => w.id === stored);
+        if (!match && normalized.length > 0) {
           setActiveWorkspaceIdState(normalized[0].id);
           localStorage.setItem("taskpilot-active-ws", normalized[0].id);
         }
@@ -54,7 +55,7 @@ export function useProjectStore() {
     Promise.all([
       apiFetch(`/projects/${activeWorkspaceId}/projects`),
       apiFetch(`/tasks/${activeWorkspaceId}/tasks`),
-      apiFetch(`/members/${activeWorkspaceId}/members`),
+      apiFetch(`/workspaces/${activeWorkspaceId}/members`),
       apiFetch(`/activities/${activeWorkspaceId}/activities`),
     ])
       .then(([proj, tsk, mem, act]) => {
@@ -122,10 +123,17 @@ export function useProjectStore() {
     setActiveWorkspace(ws.id);
   };
 
+  // Guard: ensure a workspace is selected before making scoped API calls
+  const requireWorkspace = () => {
+    if (!resolvedId) throw new Error("No workspace selected. Create or select a workspace first.");
+    return resolvedId;
+  };
+
   // --- Project actions ---
   const addProject = async (project) => {
+    const wsId = requireWorkspace();
     const p = norm(
-      await apiFetch(`/projects/${resolvedId}/projects`, {
+      await apiFetch(`/projects/${wsId}/projects`, {
         method: "POST",
         body: JSON.stringify(project),
       })
@@ -154,8 +162,9 @@ export function useProjectStore() {
 
   // --- Task actions ---
   const addTask = async (task) => {
+    const wsId = requireWorkspace();
     const t = norm(
-      await apiFetch(`/tasks/${resolvedId}/tasks`, {
+      await apiFetch(`/tasks/${wsId}/tasks`, {
         method: "POST",
         body: JSON.stringify(task),
       })
@@ -181,34 +190,45 @@ export function useProjectStore() {
     logLocalActivity("Task deleted.");
   };
 
-  // --- Member actions ---
-  const addMember = async (member) => {
+  // --- Member actions (workspace_members via workspaces API) ---
+  const inviteMember = async (email, role = "Member") => {
+    const wsId = requireWorkspace();
     const m = norm(
-      await apiFetch(`/members/${resolvedId}/members`, {
+      await apiFetch(`/workspaces/${wsId}/members`, {
         method: "POST",
-        body: JSON.stringify(member),
+        body: JSON.stringify({ email, role }),
       })
     );
     setMembers((prev) => [...prev, m]);
-    logLocalActivity(`Member '${member.name}' added.`);
+    logLocalActivity(`${m.name || email} was invited.`);
+    return m;
   };
 
-  const updateMember = async (memberId, patch) => {
+  const updateMemberRole = async (userId, role) => {
+    const wsId = requireWorkspace();
     const m = norm(
-      await apiFetch(`/members/${memberId}`, {
+      await apiFetch(`/workspaces/${wsId}/members/${userId}`, {
         method: "PATCH",
-        body: JSON.stringify(patch),
+        body: JSON.stringify({ role }),
       })
     );
-    setMembers((prev) => prev.map((x) => (x.id === memberId ? m : x)));
-    logLocalActivity("Member updated.");
+    setMembers((prev) => prev.map((x) => (x.userId === userId ? m : x)));
+    logLocalActivity("Member role updated.");
+  };
+
+  const removeMember = async (userId) => {
+    const wsId = requireWorkspace();
+    await apiFetch(`/workspaces/${wsId}/members/${userId}`, { method: "DELETE" });
+    setMembers((prev) => prev.filter((x) => x.userId !== userId));
+    logLocalActivity("Member removed.");
   };
 
   // Import multiple AI-drafted tasks into the active project
   const importDraftTasks = async (drafts, projectId, assigneeId = "") => {
+    const wsId = requireWorkspace();
     const newTasks = await Promise.all(
       drafts.map((draft) =>
-        apiFetch(`/tasks/${resolvedId}/tasks`, {
+        apiFetch(`/tasks/${wsId}/tasks`, {
           method: "POST",
           body: JSON.stringify({
             projectId,
@@ -249,8 +269,9 @@ export function useProjectStore() {
     addTask,
     updateTask,
     deleteTask,
-    addMember,
-    updateMember,
+    inviteMember,
+    updateMemberRole,
+    removeMember,
     importDraftTasks,
     resetDemoData,
   };

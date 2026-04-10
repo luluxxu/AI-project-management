@@ -1,9 +1,36 @@
+# Dependencies
 node_modules/
-dist/
-.env
-.DS_Store
 
-# SQLite database files (generated at runtime, not committed)
+# Build output
+dist/
+build/
+
+# Vite cache
+.vite/
+
+# Environment variables
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SQLite database files (generated at runtime)
 server/*.db
 server/*.db-wal
 server/*.db-shm
+
+# Claude Code
+.claude/

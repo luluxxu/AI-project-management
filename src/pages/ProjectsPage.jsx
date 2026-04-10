@@ -33,10 +33,10 @@ export default function ProjectsPage({ store }) {
   }, [selectedProjectId, store.scopedTasks]);
 
   return (
-    <div className="page-grid">
-      <div className="two-col-grid">
+    <div className="grid gap-4">
+      <div className="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
         <SectionCard title="Create Project" subtitle="Add a new project to the current workspace">
-          <div className="form-grid">
+          <div className="grid gap-3">
             <input placeholder="Project name" value={projectForm.name} onChange={(e) => setProjectForm((prev) => ({ ...prev, name: e.target.value }))} />
             <input placeholder="Description" value={projectForm.description} onChange={(e) => setProjectForm((prev) => ({ ...prev, description: e.target.value }))} />
             <select value={projectForm.status} onChange={(e) => setProjectForm((prev) => ({ ...prev, status: e.target.value }))}>
@@ -54,7 +54,7 @@ export default function ProjectsPage({ store }) {
             <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, startDate: e.target.value }))} />
             <input type="date" value={projectForm.endDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, endDate: e.target.value }))} />
             <button
-              className="primary-btn"
+              className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
               onClick={() => {
                 if (!projectForm.name.trim()) return;
                 store.addProject(projectForm);
@@ -67,7 +67,7 @@ export default function ProjectsPage({ store }) {
         </SectionCard>
 
         <SectionCard title="Create Task" subtitle="Capture and assign project tasks">
-          <div className="form-grid">
+          <div className="grid gap-3">
             <select value={taskForm.projectId} onChange={(e) => setTaskForm((prev) => ({ ...prev, projectId: e.target.value }))}>
               <option value="">Choose project</option>
               {store.scopedProjects.map((project) => (
@@ -89,13 +89,13 @@ export default function ProjectsPage({ store }) {
             <select value={taskForm.assigneeId} onChange={(e) => setTaskForm((prev) => ({ ...prev, assigneeId: e.target.value }))}>
               <option value="">Unassigned</option>
               {store.scopedMembers.map((member) => (
-                <option key={member.id} value={member.id}>{member.name}</option>
+                <option key={member.userId || member.id} value={member.userId || member.id}>{member.name}</option>
               ))}
             </select>
             <input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
             <input type="number" min="1" max="8" value={taskForm.effort} onChange={(e) => setTaskForm((prev) => ({ ...prev, effort: Number(e.target.value) }))} />
             <button
-              className="primary-btn"
+              className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
               onClick={() => {
                 if (!taskForm.projectId || !taskForm.title.trim()) return;
                 store.addTask(taskForm);
@@ -119,7 +119,7 @@ export default function ProjectsPage({ store }) {
             ) },
             { key: "priority", label: "Priority" },
             { key: "endDate", label: "Deadline" },
-            { key: "actions", label: "Actions", render: (row) => <button className="danger-btn" onClick={() => store.deleteProject(row.id)}>Delete</button> },
+            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => store.deleteProject(row.id)}>Delete</button> },
           ]}
           rows={store.scopedProjects}
         />
@@ -147,8 +147,8 @@ export default function ProjectsPage({ store }) {
             ) },
             { key: "priority", label: "Priority" },
             { key: "dueDate", label: "Due" },
-            { key: "assigneeId", label: "Assignee", render: (row) => store.scopedMembers.find((member) => member.id === row.assigneeId)?.name || "Unassigned" },
-            { key: "actions", label: "Actions", render: (row) => <button className="danger-btn" onClick={() => store.deleteTask(row.id)}>Delete</button> },
+            { key: "assigneeId", label: "Assignee", render: (row) => store.scopedMembers.find((member) => (member.userId || member.id) === row.assigneeId)?.name || "Unassigned" },
+            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => store.deleteTask(row.id)}>Delete</button> },
           ]}
           rows={filteredTasks}
         />

@@ -22,7 +22,8 @@ export function buildWorkspaceContext(workspace, projects, tasks, members) {
     .map((t) => {
       const assignee = members.find((m) => m.id === t.assigneeId);
       const overdue = t.dueDate && t.dueDate < today ? " [OVERDUE]" : "";
-      return `  - [${t.id}] ${t.title} | ${t.status} | ${t.priority} | due ${t.dueDate || "N/A"}${overdue} | Assignee: ${assignee?.name || "Unassigned"} | ${t.effort || 1}h`;
+      const planned = t.plannedStart && t.plannedEnd ? ` | planned ${t.plannedStart} -> ${t.plannedEnd}` : "";
+      return `  - [${t.id}] ${t.title} | ${t.status} | ${t.priority} | due ${t.dueDate || "N/A"}${overdue}${planned} | Assignee: ${assignee?.name || "Unassigned"} | ${t.effort || 1}h`;
     })
     .join("\n");
 

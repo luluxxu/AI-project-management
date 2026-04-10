@@ -16,17 +16,17 @@ router.get("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res)
 router.post("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res) => {
   const {
     projectId, title, description = "", status = "Todo", priority = "Medium",
-    assigneeId = "", dueDate = "", effort = 2,
+    assigneeId = "", dueDate = "", effort = 2, plannedStart = "", plannedEnd = "",
   } = req.body;
   if (!projectId || !title) return res.status(400).json({ error: "projectId and title are required" });
 
   const id = uid("t-");
   db.prepare(
-    "INSERT INTO tasks (id, workspace_id, project_id, title, description, status, priority, assignee_id, due_date, effort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-  ).run(id, req.params.wsId, projectId, title, description, status, priority, assigneeId, dueDate, effort);
+    "INSERT INTO tasks (id, workspace_id, project_id, title, description, status, priority, assignee_id, due_date, effort, planned_start, planned_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(id, req.params.wsId, projectId, title, description, status, priority, assigneeId, dueDate, effort, plannedStart, plannedEnd);
 
   logActivity(req.params.wsId, `Task '${title}' created.`);
-  res.status(201).json({ id, workspaceId: req.params.wsId, projectId, title, description, status, priority, assigneeId, dueDate, effort });
+  res.status(201).json({ id, workspaceId: req.params.wsId, projectId, title, description, status, priority, assigneeId, dueDate, effort, plannedStart, plannedEnd });
 }));
 
 // PATCH /api/tasks/:id
@@ -39,6 +39,7 @@ router.patch("/:id", requireAuth, route((req, res) => {
   const colMap = {
     title: "title", description: "description", status: "status", priority: "priority",
     assigneeId: "assignee_id", dueDate: "due_date", effort: "effort", projectId: "project_id",
+    plannedStart: "planned_start", plannedEnd: "planned_end",
   };
   const updates = [];
   const values = [];

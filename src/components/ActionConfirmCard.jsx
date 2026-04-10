@@ -12,25 +12,36 @@ import { useState } from "react";
 export default function ActionConfirmCard({ action, store, onConfirm, onDismiss }) {
   // Once confirmed, flip `done` to true to show a "Done" badge instead of buttons.
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   // Nothing to render if there's no action.
   if (!action) return null;
 
-  const handleConfirm = () => {
-    if (action.type === "CREATE_TASK") {
-      // Destructure the fields the AI provided in its payload.
-      const { title, priority, effort, description, projectId } = action.payload;
-      // importDraftTasks expects an array of draft objects + a target projectId.
-      store.importDraftTasks(
-        [{ title, priority: priority || "Medium", effort: effort || 3, description: description || "" }],
-        projectId || store.scopedProjects[0]?.id || "" // fall back to first project
-      );
-    } else if (action.type === "UPDATE_TASK_STATUS") {
-      const { taskId, newStatus } = action.payload;
-      store.updateTask(taskId, { status: newStatus });
+  const handleConfirm = async () => {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+
+    try {
+      if (action.type === "CREATE_TASK") {
+        const { title, priority, effort, description, projectId } = action.payload;
+        await store.importDraftTasks(
+          [{ title, priority: priority || "Medium", effort: effort || 3, description: description || "" }],
+          projectId || store.scopedProjects[0]?.id || ""
+        );
+      } else if (action.type === "UPDATE_TASK_STATUS") {
+        const { taskId, newStatus } = action.payload;
+        await store.updateTask(taskId, { status: newStatus });
+      }
+
+      setDone(true);
+      onConfirm?.();
+    } catch (e) {
+      setError(e.message || "Failed to apply action.");
+    } finally {
+      setSaving(false);
     }
-    setDone(true);
-    onConfirm?.(); // notify parent if it cares
   };
 
   // Human-readable summary of what will happen when the user confirms.
@@ -50,15 +61,16 @@ export default function ActionConfirmCard({ action, store, onConfirm, onDismiss 
         <span className="action-card-done">Done</span>
       ) : (
         <div className="action-card-buttons">
-          <button className="primary-btn action-btn" onClick={handleConfirm}>
-            Confirm
+          <button className="primary-btn action-btn" onClick={handleConfirm} disabled={saving}>
+            {saving ? "Applying..." : "Confirm"}
           </button>
           {/* Dismiss removes the card without touching the store. */}
-          <button className="secondary-btn action-btn" onClick={onDismiss}>
+          <button className="secondary-btn action-btn" onClick={onDismiss} disabled={saving}>
             Dismiss
           </button>
         </div>
       )}
+      {error ? <p className="text-sm text-red-600 mt-2">{error}</p> : null}
     </div>
   );
 }

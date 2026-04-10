@@ -2,8 +2,6 @@
 
 A full-stack project management platform with AI-powered task assistance, built with React + Vite on the frontend and Node.js + Express + SQLite on the backend.
 
----
-
 ## Features
 
 ### Core Project Management
@@ -49,7 +47,8 @@ ai-project-management-platform/
 │   ├── index.js               # Server entry point
 │   ├── db.js                  # SQLite setup & table creation
 │   ├── middleware/
-│   │   └── auth.js            # JWT verification middleware
+│   │   ├── auth.js            # JWT verification middleware
+│   │   └── error.js           # Shared route/error handlers
 │   └── routes/
 │       ├── auth.js            # POST /api/auth/register, /login, GET /me
 │       ├── workspaces.js      # GET/POST /api/workspaces
@@ -57,6 +56,8 @@ ai-project-management-platform/
 │       ├── tasks.js           # GET/POST/PATCH/DELETE /api/tasks
 │       ├── members.js         # GET/POST/PATCH /api/members
 │       └── activities.js      # GET /api/activities
+│   └── utils/
+│       └── workspace.js       # Workspace ownership + activity helpers
 ├── src/                       # React frontend (port 5173)
 │   ├── context/
 │   │   └── AuthContext.jsx    # JWT token & user state
@@ -118,6 +119,7 @@ Go to [http://localhost:5173](http://localhost:5173). You will be redirected to 
 Register a new account, then start creating workspaces, projects, and tasks.
 
 > The SQLite database file is created automatically at `server/taskpilot.db` on first run.
+> This project uses SQLite as its only active database implementation.
 
 ---
 

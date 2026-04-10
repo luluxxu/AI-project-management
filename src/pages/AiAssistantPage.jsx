@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useCallback, useEffect, useMemo, useState } from "react";
 import SectionCard from "../components/SectionCard";
 import SimpleTable from "../components/SimpleTable";
@@ -35,24 +34,10 @@ export default function AiAssistantPage({ store }) {
   });
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [provider, setProvider] = useState("auto");
-=======
-import { useCallback, useState } from "react";
-import SectionCard from "../components/SectionCard";
-import SimpleTable from "../components/SimpleTable";
-import ApiKeySettings from "../components/ApiKeySettings";
-import AiChatPanel from "../components/AiChatPanel";
-import { extractTasksWithClaude, generateDailyPlanWithClaude } from "../utils/claudeApi";
-import { extractTasksFromText, generateDailyPlan } from "../utils/aiHelpers";
-import { useApiKey } from "../utils/useApiKey";
-
-export default function AiAssistantPage({ store }) {
-  const { apiKey, hasKey, setApiKey, clearApiKey } = useApiKey();
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
   const [text, setText] = useState(
     "Discuss onboarding flow; implement signup API ASAP; prepare unit tests; design error states for failed login"
   );
-<<<<<<< HEAD
   const [sourceType, setSourceType] = useState("notes");
   const [selectedProjectId, setSelectedProjectId] = useState(store.scopedProjects[0]?.id || "");
   const [drafts, setDrafts] = useState([]);
@@ -93,18 +78,10 @@ export default function AiAssistantPage({ store }) {
       ...(available.includes("chatgpt") ? [{ value: "chatgpt", label: "ChatGPT" }] : []),
     ];
   }, [aiStatus.configuredProviders]);
-=======
-  const [selectedProjectId, setSelectedProjectId] = useState(store.scopedProjects[0]?.id || "");
-  const [drafts, setDrafts] = useState([]);
-  const [plan, setPlan] = useState([]);
-  const [loading, setLoading] = useState({ extract: false, plan: false });
-  const [error, setError] = useState({ extract: null, plan: null });
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
   const handleExtract = useCallback(async () => {
     if (!text.trim()) return;
 
-<<<<<<< HEAD
     setLoading((prev) => ({ ...prev, extract: true }));
     setError((prev) => ({ ...prev, extract: null }));
     try {
@@ -114,25 +91,12 @@ export default function AiAssistantPage({ store }) {
         const result = await extractTasksWithAi(text, provider, sourceType);
         setDrafts(result?.length ? result : extractTasksFromText(text));
       }
-=======
-    if (!hasKey) {
-      setDrafts(extractTasksFromText(text));
-      return;
-    }
-
-    setLoading((prev) => ({ ...prev, extract: true }));
-    setError((prev) => ({ ...prev, extract: null }));
-    try {
-      const result = await extractTasksWithClaude(text, apiKey);
-      setDrafts(result ?? extractTasksFromText(text));
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     } catch (e) {
       setError((prev) => ({ ...prev, extract: e.message || "Task extraction failed" }));
       setDrafts(extractTasksFromText(text));
     } finally {
       setLoading((prev) => ({ ...prev, extract: false }));
     }
-<<<<<<< HEAD
   }, [text, aiConfigured, provider, sourceType]);
 
   const handleGeneratePlan = useCallback(async () => {
@@ -259,49 +223,6 @@ export default function AiAssistantPage({ store }) {
                 <option value="email">Email Thread</option>
               </select>
             </div>
-=======
-  }, [text, apiKey, hasKey]);
-
-  const handleGeneratePlan = useCallback(async () => {
-    if (!hasKey) {
-      setPlan(generateDailyPlan(store.scopedTasks));
-      return;
-    }
-
-    setLoading((prev) => ({ ...prev, plan: true }));
-    setError((prev) => ({ ...prev, plan: null }));
-    try {
-      const result = await generateDailyPlanWithClaude(
-        store.scopedTasks,
-        store.scopedProjects,
-        store.scopedMembers,
-        apiKey
-      );
-      setPlan(result ?? generateDailyPlan(store.scopedTasks));
-    } catch (e) {
-      setError((prev) => ({ ...prev, plan: e.message || "Plan generation failed" }));
-      setPlan(generateDailyPlan(store.scopedTasks));
-    } finally {
-      setLoading((prev) => ({ ...prev, plan: false }));
-    }
-  }, [store.scopedTasks, store.scopedProjects, store.scopedMembers, apiKey, hasKey]);
-
-  return (
-    <div className="page-grid">
-      <ApiKeySettings
-        apiKey={apiKey}
-        hasKey={hasKey}
-        onSave={setApiKey}
-        onClear={clearApiKey}
-      />
-
-      <div className="two-col-grid">
-        <SectionCard
-          title="Task Extraction"
-          subtitle={hasKey ? "Powered by Groq / Llama 3" : "Heuristic mode (no API key)"}
-        >
-          <div className="form-grid">
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
             <textarea rows="5" value={text} onChange={(e) => setText(e.target.value)} />
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               <select
@@ -311,7 +232,6 @@ export default function AiAssistantPage({ store }) {
               >
                 <option value="">Select project</option>
                 {store.scopedProjects.map((project) => (
-<<<<<<< HEAD
                   <option key={project.id} value={project.id}>{project.name}</option>
                 ))}
               </select>
@@ -320,18 +240,6 @@ export default function AiAssistantPage({ store }) {
               </button>
               <button
                 className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
-=======
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <button className="secondary-btn" onClick={handleExtract} disabled={loading.extract}>
-                {loading.extract ? "Analyzing…" : "Extract Tasks"}
-              </button>
-              <button
-                className="primary-btn"
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
                 disabled={!selectedProjectId || !drafts.length}
                 onClick={() => {
                   if (!selectedProjectId || !drafts.length) return;
@@ -343,11 +251,7 @@ export default function AiAssistantPage({ store }) {
               </button>
             </div>
           </div>
-<<<<<<< HEAD
           {error.extract && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.extract}</p>}
-=======
-          {error.extract && <p className="inline-error">{error.extract}</p>}
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
           <SimpleTable
             columns={[
               { key: "title", label: "Task Title" },
@@ -355,7 +259,6 @@ export default function AiAssistantPage({ store }) {
               { key: "effort", label: "Est. Hours" },
             ]}
             rows={drafts}
-<<<<<<< HEAD
             emptyLabel="Paste notes/email text and click Extract Tasks."
           />
         </SectionCard>
@@ -384,29 +287,12 @@ export default function AiAssistantPage({ store }) {
           </div>
           {error.plan && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.plan}</p>}
           {error.applyPlan && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.applyPlan}</p>}
-=======
-            emptyLabel="Paste meeting notes or requirements, then click Extract Tasks."
-          />
-        </SectionCard>
-
-        <SectionCard
-          title="Daily Plan Suggestions"
-          subtitle={hasKey ? "Powered by Groq / Llama 3" : "Heuristic mode (no API key)"}
-        >
-          <div style={{ marginBottom: "1rem" }}>
-            <button className="secondary-btn" onClick={handleGeneratePlan} disabled={loading.plan}>
-              {loading.plan ? "Generating…" : "Generate Today's Plan"}
-            </button>
-          </div>
-          {error.plan && <p className="inline-error">{error.plan}</p>}
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
           <SimpleTable
             columns={[
               { key: "rank", label: "Rank" },
               { key: "title", label: "Task" },
               { key: "reason", label: "Reason" },
             ]}
-<<<<<<< HEAD
             rows={plan.orderedTasks}
             emptyLabel="Click Plan My Day to generate ordered tasks."
           />
@@ -427,15 +313,10 @@ export default function AiAssistantPage({ store }) {
             ]}
             rows={plan.timeBlocks}
             emptyLabel="No time blocks yet."
-=======
-            rows={plan}
-            emptyLabel="Click Generate Today's Plan to get AI recommendations."
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
           />
         </SectionCard>
       </div>
 
-<<<<<<< HEAD
       <SectionCard title="Course Assignment Scheduler" subtitle="Milestones + weekly plan">
         <div className="grid gap-3">
           <input value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Course or assignment name" />
@@ -478,16 +359,6 @@ export default function AiAssistantPage({ store }) {
           <p className="text-slate-400 text-sm py-2">
             Set <code>OPENAI_API_KEY</code> in server <code>.env</code> to enable chat.
           </p>
-=======
-      <SectionCard
-        title="AI Chat Assistant"
-        subtitle={hasKey ? "Chat with Llama 3 about your workspace" : "Configure an API key above to enable"}
-      >
-        {hasKey ? (
-          <AiChatPanel apiKey={apiKey} store={store} />
-        ) : (
-          <p className="empty-label">Please configure a Claude API key above to enable the chat assistant.</p>
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
         )}
       </SectionCard>
     </div>

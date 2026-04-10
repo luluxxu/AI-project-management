@@ -1,6 +1,5 @@
 import { Router } from "express";
 import db from "../db.js";
-<<<<<<< HEAD
 import { requireAuth, requireWorkspaceAccess, canAccessWorkspace } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
 import { logActivity, uid } from "../utils/workspace.js";
@@ -8,28 +7,11 @@ import { logActivity, uid } from "../utils/workspace.js";
 const router = Router();
 
 router.get("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res) => {
-=======
-import { requireAuth } from "../middleware/auth.js";
-import { route } from "../middleware/error.js";
-import { ensureWorkspaceAccess, logActivity, uid } from "../utils/workspace.js";
-
-const router = Router();
-
-// GET /api/workspaces/:wsId/tasks
-router.get("/:wsId/tasks", requireAuth, route((req, res) => {
-  if (!ensureWorkspaceAccess(res, req.params.wsId, req.userId)) return;
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   const tasks = db.prepare("SELECT * FROM tasks WHERE workspace_id = ?").all(req.params.wsId);
   res.json(tasks);
 }));
 
-<<<<<<< HEAD
 router.post("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res) => {
-=======
-// POST /api/workspaces/:wsId/tasks
-router.post("/:wsId/tasks", requireAuth, route((req, res) => {
-  if (!ensureWorkspaceAccess(res, req.params.wsId, req.userId)) return;
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   const {
     projectId,
     title,
@@ -50,7 +32,6 @@ router.post("/:wsId/tasks", requireAuth, route((req, res) => {
   ).run(id, req.params.wsId, projectId, title, description, status, priority, assigneeId, dueDate, effort, plannedStart, plannedEnd);
 
   logActivity(req.params.wsId, `Task '${title}' created.`);
-<<<<<<< HEAD
   res.status(201).json({
     id,
     workspaceId: req.params.wsId,
@@ -73,16 +54,6 @@ router.patch("/:id", requireAuth, route((req, res) => {
   if (!canAccessWorkspace(task.workspace_id, req.userId, req.userRole)) {
     return res.status(403).json({ error: "Forbidden" });
   }
-=======
-  res.status(201).json({ id, workspaceId: req.params.wsId, projectId, title, description, status, priority, assigneeId, dueDate, effort });
-}));
-
-// PATCH /api/tasks/:id
-router.patch("/:id", requireAuth, route((req, res) => {
-  const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
-  if (!task) return res.status(404).json({ error: "Not found" });
-  if (!ensureWorkspaceAccess(res, task.workspace_id, req.userId)) return;
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
   const colMap = {
     title: "title",
@@ -96,7 +67,6 @@ router.patch("/:id", requireAuth, route((req, res) => {
     plannedStart: "planned_start",
     plannedEnd: "planned_end",
   };
-
   const updates = [];
   const values = [];
   for (const [bodyKey, col] of Object.entries(colMap)) {
@@ -113,20 +83,12 @@ router.patch("/:id", requireAuth, route((req, res) => {
   res.json(db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id));
 }));
 
-<<<<<<< HEAD
 router.delete("/:id", requireAuth, route((req, res) => {
   const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
   if (!task) return res.status(404).json({ error: "Not found" });
   if (!canAccessWorkspace(task.workspace_id, req.userId, req.userRole)) {
     return res.status(403).json({ error: "Forbidden" });
   }
-=======
-// DELETE /api/tasks/:id
-router.delete("/:id", requireAuth, route((req, res) => {
-  const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
-  if (!task) return res.status(404).json({ error: "Not found" });
-  if (!ensureWorkspaceAccess(res, task.workspace_id, req.userId)) return;
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
   db.prepare("DELETE FROM tasks WHERE id = ?").run(req.params.id);
   logActivity(task.workspace_id, "Task deleted.");

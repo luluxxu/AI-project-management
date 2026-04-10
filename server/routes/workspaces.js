@@ -1,6 +1,5 @@
 import { Router } from "express";
 import db from "../db.js";
-<<<<<<< HEAD
 import {
   requireAuth,
   requireWorkspaceAccess,
@@ -93,33 +92,11 @@ router.get("/", requireAuth, route((req, res) => {
   res.json(workspaces);
 }));
 
-=======
-import { requireAuth } from "../middleware/auth.js";
-import { route } from "../middleware/error.js";
-import { ensureWorkspaceOwner, logActivity, uid } from "../utils/workspace.js";
-
-const router = Router();
-
-// GET /api/workspaces — list all teams/workspaces the current user belongs to
-router.get("/", requireAuth, route((req, res) => {
-  const workspaces = db.prepare(`
-    SELECT w.*, m.role AS current_role
-    FROM workspaces w
-    JOIN members m ON m.workspace_id = w.id
-    WHERE m.user_id = ?
-    ORDER BY w.created_at
-  `).all(req.userId);
-  res.json(workspaces);
-}));
-
-// POST /api/workspaces — create a new workspace
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 router.post("/", requireAuth, route((req, res) => {
   const { name, description = "" } = req.body;
   if (!name) return res.status(400).json({ error: "name is required" });
 
   const id = uid("ws-");
-<<<<<<< HEAD
   const now = new Date().toISOString();
   db.prepare("INSERT INTO workspaces (id, name, description, created_at, owner_id) VALUES (?, ?, ?, ?, ?)")
     .run(id, name, description, now, req.userId);
@@ -178,14 +155,15 @@ router.post("/:wsId/members", requireAuth, requireWorkspaceAdmin, route((req, re
   }
 
   const now = new Date().toISOString();
+  const memberId = uid("wm-");
   db.prepare("INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)")
-    .run(uid("wm-"), req.params.wsId, user.id, role, now);
+    .run(memberId, req.params.wsId, user.id, role, now);
   db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)")
     .run(uid("m-"), req.params.wsId, user.id, user.name, role, user.email);
 
   logActivity(req.params.wsId, `${user.name} was added as ${role}.`);
   res.status(201).json({
-    id: uid("wm-response-"),
+    id: memberId,
     workspaceId: req.params.wsId,
     userId: user.id,
     name: user.name,
@@ -235,23 +213,6 @@ router.delete("/:wsId/members/:userId", requireAuth, requireWorkspaceAdmin, rout
 }));
 
 router.get("/:wsId/invitations", requireAuth, requireWorkspaceAdmin, route((req, res) => {
-=======
-  const createdAt = new Date().toISOString();
-  db.prepare("INSERT INTO workspaces (id, name, description, created_at, owner_id) VALUES (?, ?, ?, ?, ?)")
-    .run(id, name, description, createdAt, req.userId);
-  const owner = db.prepare("SELECT name, email FROM users WHERE id = ?").get(req.userId);
-  db.prepare("INSERT INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(uid("m-"), id, req.userId, owner.name, "Owner", owner.email);
-
-  logActivity(id, `Workspace '${name}' created.`);
-  res.status(201).json({ id, name, description, createdAt, ownerId: req.userId, currentRole: "Owner" });
-}));
-
-// GET /api/workspaces/:wsId/invitations — list pending invitations sent for a team
-router.get("/:wsId/invitations", requireAuth, route((req, res) => {
-  if (!ensureWorkspaceOwner(res, req.params.wsId, req.userId)) return;
-
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   const invitations = db.prepare(`
     SELECT id, workspace_id, invited_user_id, invited_email, invited_name, role, status, invited_by_id, created_at, responded_at
     FROM invitations
@@ -261,7 +222,6 @@ router.get("/:wsId/invitations", requireAuth, route((req, res) => {
   res.json(invitations);
 }));
 
-<<<<<<< HEAD
 router.post("/:wsId/invitations", requireAuth, requireWorkspaceAdmin, route((req, res) => {
   const { email = "", role = "Member" } = req.body;
   const normalizedEmail = email.trim().toLowerCase();
@@ -269,29 +229,13 @@ router.post("/:wsId/invitations", requireAuth, requireWorkspaceAdmin, route((req
   if (!["Owner", "Admin", "Member"].includes(role)) {
     return res.status(400).json({ error: "role must be Owner, Admin, or Member" });
   }
-=======
-// POST /api/workspaces/:wsId/invitations — invite a registered user to the team
-router.post("/:wsId/invitations", requireAuth, route((req, res) => {
-  if (!ensureWorkspaceOwner(res, req.params.wsId, req.userId)) return;
-
-  const { email = "", role = "Member" } = req.body;
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail) return res.status(400).json({ error: "email is required" });
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 
   const user = db.prepare("SELECT id, name, email FROM users WHERE lower(email) = ?").get(normalizedEmail);
   if (!user) {
     return res.status(400).json({ error: "That email is not registered yet. Ask them to sign up first." });
   }
 
-<<<<<<< HEAD
   if (getWorkspaceMembership(req.params.wsId, user.id)) {
-=======
-  const existingMember = db.prepare(
-    "SELECT id FROM members WHERE workspace_id = ? AND user_id = ?"
-  ).get(req.params.wsId, user.id);
-  if (existingMember) {
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     return res.status(409).json({ error: "That user is already a member of this team." });
   }
 
@@ -335,7 +279,6 @@ router.post("/:wsId/invitations", requireAuth, route((req, res) => {
   res.status(201).json(invitation);
 }));
 
-<<<<<<< HEAD
 router.post("/:wsId/join-request", requireAuth, route((req, res) => {
   const workspace = db.prepare("SELECT id FROM workspaces WHERE id = ?").get(req.params.wsId);
   if (!workspace) return res.status(404).json({ error: "Workspace not found" });
@@ -347,8 +290,8 @@ router.post("/:wsId/join-request", requireAuth, route((req, res) => {
   const existingReq = db.prepare(
     "SELECT id, status FROM workspace_join_requests WHERE workspace_id = ? AND user_id = ?"
   ).get(req.params.wsId, req.userId);
-
   const now = new Date().toISOString();
+
   if (existingReq && existingReq.status === "Pending") {
     return res.status(409).json({ error: "Request already pending" });
   }
@@ -403,6 +346,4 @@ router.patch("/:wsId/join-requests/:requestId", requireAuth, requireWorkspaceAdm
   res.json({ ok: true, status });
 }));
 
-=======
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
 export default router;

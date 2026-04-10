@@ -233,7 +233,7 @@ export function useProjectStore() {
           body: JSON.stringify({
             projectId,
             title: draft.title,
-            description: "Imported from AI helper",
+            description: draft.description || "Imported from AI helper",
             status: "Todo",
             priority: draft.priority || "Medium",
             assigneeId,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { chatWithClaude } from "../utils/claudeApi";
+import { chatWithAi } from "../utils/claudeApi";
 import { buildWorkspaceContext } from "../utils/buildWorkspaceContext";
 import ActionConfirmCard from "./ActionConfirmCard";
 
@@ -11,7 +11,7 @@ const SUGGESTED_PROMPTS = [
   "Is the team workload balanced?",
 ];
 
-export default function AiChatPanel({ store }) {
+export default function AiChatPanel({ store, provider = "auto" }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export default function AiChatPanel({ store }) {
         store.scopedTasks,
         store.scopedMembers
       );
-      const result = await chatWithClaude(nextMessages, context);
+      const result = await chatWithAi(nextMessages, context, provider);
 
       setMessages((prev) => [
         ...prev,

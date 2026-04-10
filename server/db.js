@@ -50,7 +50,9 @@ db.exec(`
     priority     TEXT NOT NULL DEFAULT 'Medium' CHECK (priority IN ('Low', 'Medium', 'High')),
     assignee_id  TEXT DEFAULT '',
     due_date     TEXT DEFAULT '',
-    effort       INTEGER DEFAULT 2
+    effort       INTEGER DEFAULT 2,
+    planned_start TEXT DEFAULT '',
+    planned_end   TEXT DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS members (
@@ -148,6 +150,8 @@ db.exec(`
 
 // Add role column for existing databases that don't have it yet
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'Member'"); } catch { /* column already exists */ }
+try { db.exec("ALTER TABLE tasks ADD COLUMN planned_start TEXT DEFAULT ''"); } catch { /* column already exists */ }
+try { db.exec("ALTER TABLE tasks ADD COLUMN planned_end TEXT DEFAULT ''"); } catch { /* column already exists */ }
 
 // ── Seed default admin user ──
 const ADMIN_EMAIL = "admin@example.com";

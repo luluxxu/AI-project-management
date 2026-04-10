@@ -4,46 +4,42 @@
 
 import { apiFetch } from "./api";
 
-// ── 1. Task Extraction ──────────────────────────────────────────────────────
-// Sends free-form text (e.g. meeting notes) to the backend AI endpoint.
-// Returns a JSON array of structured task draft objects.
-
-export async function extractTasksWithClaude(text) {
-  const tasks = await apiFetch("/ai/extract-tasks", {
+export async function extractTasksWithAi(text, provider = "auto", sourceType = "notes") {
+  const result = await apiFetch("/ai/extract-tasks", {
     method: "POST",
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, provider, sourceType }),
   });
-  return tasks;
+  return result.tasks || [];
 }
 
-// ── 2. Daily Plan Generation ────────────────────────────────────────────────
-// Sends the current workspace's open tasks (plus project/member context).
-// Returns a ranked list of up to 5 tasks to focus on today.
-
-export async function generateDailyPlanWithClaude(tasks, projects, members) {
+export async function generateDailyPlanWithAi(payload) {
   const plan = await apiFetch("/ai/daily-plan", {
     method: "POST",
-    body: JSON.stringify({ tasks, projects, members }),
+    body: JSON.stringify(payload),
   });
   return plan;
 }
 
-// ── 3. Chat Assistant ───────────────────────────────────────────────────────
-// Multi-turn chat with full workspace awareness.
-// Returns { text, action } where action is an optional mutation suggestion.
-
-export async function chatWithClaude(messages, workspaceContext) {
+export async function chatWithAi(messages, workspaceContext, provider = "auto") {
   const result = await apiFetch("/ai/chat", {
     method: "POST",
-    body: JSON.stringify({ messages, workspaceContext }),
+    body: JSON.stringify({ messages, workspaceContext, provider }),
   });
   return result;
 }
 
-// ── 4. Status check ─────────────────────────────────────────────────────────
-// Returns whether the server has an AI key configured.
-
 export async function checkAiStatus() {
-  const { configured } = await apiFetch("/ai/status");
-  return configured;
+  return apiFetch("/ai/status");
 }
+
+export async function generateCourseSchedule(payload) {
+  return apiFetch("/ai/course-schedule", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// Backward-compatible aliases
+export const extractTasksWithClaude = extractTasksWithAi;
+export const generateDailyPlanWithClaude = generateDailyPlanWithAi;
+export const chatWithClaude = chatWithAi;

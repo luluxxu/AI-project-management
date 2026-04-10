@@ -1,6 +1,5 @@
 import { Router } from "express";
 import db from "../db.js";
-<<<<<<< HEAD
 import { requireAuth, canAccessWorkspace, getWorkspaceMembership } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
 import { logActivity } from "../utils/workspace.js";
@@ -36,37 +35,10 @@ const listMembers = (workspaceId) =>
 router.get("/:wsId/members", requireAuth, route((req, res) => {
   if (!canAccessWorkspace(req.params.wsId, req.userId, req.userRole)) {
     return res.status(403).json({ error: "Forbidden" });
-=======
-import { requireAuth } from "../middleware/auth.js";
-import { route } from "../middleware/error.js";
-import { ensureWorkspaceAccess, ensureWorkspaceOwner, logActivity } from "../utils/workspace.js";
-
-const router = Router();
-
-// GET /api/workspaces/:wsId/members
-router.get("/:wsId/members", requireAuth, route((req, res) => {
-  if (!ensureWorkspaceAccess(res, req.params.wsId, req.userId)) return;
-  const members = db.prepare("SELECT * FROM members WHERE workspace_id = ?").all(req.params.wsId);
-  res.json(members);
-}));
-
-// PATCH /api/members/:id  (typically just role updates)
-router.patch("/:id", requireAuth, route((req, res) => {
-  const member = db.prepare("SELECT * FROM members WHERE id = ?").get(req.params.id);
-  if (!member) return res.status(404).json({ error: "Not found" });
-  if (!ensureWorkspaceOwner(res, member.workspace_id, req.userId)) return;
-
-  const fields = ["name", "role", "email"];
-  const updates = [];
-  const values = [];
-  for (const field of fields) {
-    if (req.body[field] !== undefined) { updates.push(`${field} = ?`); values.push(req.body[field]); }
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   }
   res.json(listMembers(req.params.wsId));
 }));
 
-<<<<<<< HEAD
 router.patch("/:id", requireAuth, route((req, res) => {
   const member = db.prepare("SELECT * FROM members WHERE id = ?").get(req.params.id);
   const workspaceMember = member
@@ -136,25 +108,10 @@ router.delete("/:id", requireAuth, route((req, res) => {
     return res.status(403).json({ error: "Workspace admin access required" });
   }
   if (target.role === "Owner") {
-=======
-  values.push(req.params.id);
-  db.prepare(`UPDATE members SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-  logActivity(member.workspace_id, "Member updated.");
-  res.json(db.prepare("SELECT * FROM members WHERE id = ?").get(req.params.id));
-}));
-
-// DELETE /api/members/:id
-router.delete("/:id", requireAuth, route((req, res) => {
-  const member = db.prepare("SELECT * FROM members WHERE id = ?").get(req.params.id);
-  if (!member) return res.status(404).json({ error: "Not found" });
-  if (!ensureWorkspaceOwner(res, member.workspace_id, req.userId)) return;
-  if (member.role === "Owner") {
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
     return res.status(400).json({ error: "The team owner cannot be removed." });
   }
 
   db.prepare("DELETE FROM members WHERE id = ?").run(req.params.id);
-<<<<<<< HEAD
   db.prepare("DELETE FROM workspace_members WHERE id = ?").run(req.params.id);
   if (target.user_id) {
     db.prepare("DELETE FROM members WHERE workspace_id = ? AND user_id = ?").run(workspaceId, target.user_id);
@@ -162,9 +119,6 @@ router.delete("/:id", requireAuth, route((req, res) => {
   }
 
   logActivity(workspaceId, "Member removed.");
-=======
-  logActivity(member.workspace_id, `Member '${member.name}' removed.`);
->>>>>>> f230ff4d41077ea9e3a32311e6cbac8c8bb22f66
   res.json({ ok: true });
 }));
 

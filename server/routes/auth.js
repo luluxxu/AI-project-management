@@ -2,15 +2,22 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
+<<<<<<< HEAD
 import db from "../db.js";
 import { ADMIN_EMAIL } from "../db.js";
+=======
+import db, { ADMIN_EMAIL } from "../db.js";
+>>>>>>> 15f72fd4 (update members.js)
 import { requireAuth, JWT_SECRET } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
 
 const router = Router();
 const uid = () => randomUUID().slice(0, 8);
 
+<<<<<<< HEAD
 // POST /api/auth/register — create a new account and return a JWT
+=======
+>>>>>>> 15f72fd4 (update members.js)
 router.post("/register", route((req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) {
@@ -35,7 +42,10 @@ router.post("/register", route((req, res) => {
   res.status(201).json({ token, user: { id, name, email, role } });
 }));
 
+<<<<<<< HEAD
 // POST /api/auth/login — verify credentials and return a JWT
+=======
+>>>>>>> 15f72fd4 (update members.js)
 router.post("/login", route((req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -47,11 +57,21 @@ router.post("/login", route((req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
+<<<<<<< HEAD
   const token = jwt.sign({ userId: user.id, email, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
   res.json({ token, user: { id: user.id, name: user.name, email, role: user.role } });
 }));
 
 // GET /api/auth/me — return current user info (requires valid token)
+=======
+  const token = jwt.sign({ userId: user.id, email, role: user.role || "Member" }, JWT_SECRET, { expiresIn: "7d" });
+  res.json({
+    token,
+    user: { id: user.id, name: user.name, email, role: user.role || "Member" },
+  });
+}));
+
+>>>>>>> 15f72fd4 (update members.js)
 router.get("/me", requireAuth, route((req, res) => {
   const user = db.prepare("SELECT id, name, email, role, created_at FROM users WHERE id = ?").get(req.userId);
   if (!user) return res.status(404).json({ error: "User not found" });

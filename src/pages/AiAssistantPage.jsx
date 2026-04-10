@@ -76,7 +76,6 @@ export default function AiAssistantPage({ store }) {
     return [
       { value: "auto", label: "Auto" },
       ...(available.includes("chatgpt") ? [{ value: "chatgpt", label: "ChatGPT" }] : []),
-      ...(available.includes("gemini") ? [{ value: "gemini", label: "Gemini" }] : []),
     ];
   }, [aiStatus.configuredProviders]);
 
@@ -158,7 +157,7 @@ export default function AiAssistantPage({ store }) {
     if (!aiConfigured) {
       setError((prev) => ({
         ...prev,
-        course: "Course schedule generation requires ChatGPT or Gemini key on server.",
+        course: "Course schedule generation requires OpenAI key on server.",
       }));
       return;
     }
@@ -209,7 +208,7 @@ export default function AiAssistantPage({ store }) {
           </select>
           {!aiConfigured && !checkingStatus && (
             <p className="text-slate-500" style={{ fontSize: "0.85rem" }}>
-              Set <code>OPENAI_API_KEY</code> and/or <code>GEMINI_API_KEY</code> in server <code>.env</code> and restart the server.
+              Set <code>OPENAI_API_KEY</code> in server <code>.env</code> and restart the server.
             </p>
           )}
         </div>
@@ -358,7 +357,7 @@ export default function AiAssistantPage({ store }) {
           <AiChatPanel store={store} provider={provider} />
         ) : (
           <p className="text-slate-400 text-sm py-2">
-            Set <code>OPENAI_API_KEY</code> or <code>GEMINI_API_KEY</code> in server <code>.env</code> to enable chat.
+            Set <code>OPENAI_API_KEY</code> in server <code>.env</code> to enable chat.
           </p>
         )}
       </SectionCard>

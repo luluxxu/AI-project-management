@@ -5,13 +5,11 @@ import { requireAuth } from "../middleware/auth.js";
 const router = Router();
 
 const CHATGPT_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const MAX_TOKENS = 1400;
 
 function getConfiguredProviders() {
   const providers = [];
   if (process.env.OPENAI_API_KEY) providers.push("chatgpt");
-  if (process.env.GEMINI_API_KEY) providers.push("gemini");
   return providers;
 }
 
@@ -201,42 +199,8 @@ async function callChatGpt({ systemPrompt, messages, maxTokens = MAX_TOKENS, tem
   return response.choices?.[0]?.message?.content?.trim() || "";
 }
 
-async function callGemini({ systemPrompt, messages, maxTokens = MAX_TOKENS, temperature = 0.2 }) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
-
-  const contents = messages.map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...(systemPrompt ? { systemInstruction: { parts: [{ text: systemPrompt }] } } : {}),
-      contents,
-      generationConfig: {
-        temperature,
-        maxOutputTokens: maxTokens,
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini API error: ${errText}`);
-  }
-
-  const data = await res.json();
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  return parts.map((p) => p.text || "").join("\n").trim();
-}
-
 async function callModel({ provider, systemPrompt, messages, maxTokens = MAX_TOKENS, temperature = 0.2 }) {
   if (provider === "chatgpt") return callChatGpt({ systemPrompt, messages, maxTokens, temperature });
-  if (provider === "gemini") return callGemini({ systemPrompt, messages, maxTokens, temperature });
   throw new Error("AI provider is not configured");
 }
 
@@ -255,7 +219,7 @@ router.post("/extract-tasks", requireAuth, async (req, res) => {
   const provider = resolveProvider(req.body?.provider);
   if (!provider) {
     return res.status(503).json({
-      error: "AI service not configured. Set OPENAI_API_KEY and/or GEMINI_API_KEY in server .env",
+      error: "AI service not configured. Set OPENAI_API_KEY in server .env",
     });
   }
 
@@ -395,7 +359,7 @@ router.post("/course-schedule", requireAuth, async (req, res) => {
   const provider = resolveProvider(req.body?.provider);
   if (!provider) {
     return res.status(503).json({
-      error: "AI service not configured. Set OPENAI_API_KEY and/or GEMINI_API_KEY in server .env",
+      error: "AI service not configured. Set OPENAI_API_KEY in server .env",
     });
   }
 
@@ -445,7 +409,7 @@ router.post("/chat", requireAuth, async (req, res) => {
   const provider = resolveProvider(req.body?.provider);
   if (!provider) {
     return res.status(503).json({
-      error: "AI service not configured. Set OPENAI_API_KEY and/or GEMINI_API_KEY in server .env",
+      error: "AI service not configured. Set OPENAI_API_KEY in server .env",
     });
   }
 

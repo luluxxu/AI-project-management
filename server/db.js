@@ -1,25 +1,22 @@
 import Database from "better-sqlite3";
+import bcrypt from "bcryptjs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Open (or create) the SQLite database file next to this file.
 const db = new Database(join(__dirname, "taskpilot.db"));
 
-// Enable WAL mode for better concurrent read performance.
 db.pragma("journal_mode = WAL");
-// Enforce foreign key constraints (SQLite disables them by default).
 db.pragma("foreign_keys = ON");
 
-// Create all tables on first run. IF NOT EXISTS makes this safe to re-run.
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
-    id           TEXT PRIMARY KEY,
-    email        TEXT UNIQUE NOT NULL,
+    id            TEXT PRIMARY KEY,
+    email         TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    name         TEXT NOT NULL,
-    created_at   TEXT NOT NULL
+    name          TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'Member',
+    created_at    TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS workspaces (
@@ -42,16 +39,18 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS tasks (
-    id           TEXT PRIMARY KEY,
-    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-    project_id   TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    title        TEXT NOT NULL,
-    description  TEXT DEFAULT '',
-    status       TEXT NOT NULL DEFAULT 'Todo' CHECK (status IN ('Todo', 'In Progress', 'Done')),
-    priority     TEXT NOT NULL DEFAULT 'Medium' CHECK (priority IN ('Low', 'Medium', 'High')),
-    assignee_id  TEXT DEFAULT '',
-    due_date     TEXT DEFAULT '',
-    effort       INTEGER DEFAULT 2
+    id            TEXT PRIMARY KEY,
+    workspace_id  TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title         TEXT NOT NULL,
+    description   TEXT DEFAULT '',
+    status        TEXT NOT NULL DEFAULT 'Todo' CHECK (status IN ('Todo', 'In Progress', 'Done')),
+    priority      TEXT NOT NULL DEFAULT 'Medium' CHECK (priority IN ('Low', 'Medium', 'High')),
+    assignee_id   TEXT DEFAULT '',
+    due_date      TEXT DEFAULT '',
+    effort        INTEGER DEFAULT 2,
+    planned_start TEXT DEFAULT '',
+    planned_end   TEXT DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS members (
@@ -71,16 +70,34 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS invitations (
-    id             TEXT PRIMARY KEY,
-    workspace_id   TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    id              TEXT PRIMARY KEY,
+    workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
     invited_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    invited_email  TEXT NOT NULL,
-    invited_name   TEXT NOT NULL,
-    role           TEXT NOT NULL DEFAULT 'Member' CHECK (role IN ('Owner', 'Admin', 'Member')),
-    status         TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Accepted', 'Rejected')),
-    invited_by_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at     TEXT NOT NULL,
-    responded_at   TEXT
+    invited_email   TEXT NOT NULL,
+    invited_name    TEXT NOT NULL,
+    role            TEXT NOT NULL DEFAULT 'Member' CHECK (role IN ('Owner', 'Admin', 'Member')),
+    status          TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Accepted', 'Rejected')),
+    invited_by_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at      TEXT NOT NULL,
+    responded_at    TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS workspace_members (
+    id           TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role         TEXT NOT NULL DEFAULT 'Member',
+    joined_at    TEXT NOT NULL,
+    UNIQUE(workspace_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS workspace_join_requests (
+    id           TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status       TEXT NOT NULL DEFAULT 'Pending',
+    created_at   TEXT NOT NULL,
+    UNIQUE(workspace_id, user_id)
   );
 
   CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
@@ -89,6 +106,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
   CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
   CREATE INDEX IF NOT EXISTS idx_members_workspace_id ON members(workspace_id);
+  CREATE INDEX IF NOT EXISTS idx_members_user_id ON members(user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_members_workspace_user_unique ON members(workspace_id, user_id);
   CREATE INDEX IF NOT EXISTS idx_activities_workspace_id_created_at ON activities(workspace_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_invitations_workspace_id ON invitations(workspace_id);
   CREATE INDEX IF NOT EXISTS idx_invitations_invited_user_id_status ON invitations(invited_user_id, status);
@@ -96,17 +115,11 @@ db.exec(`
     ON invitations(workspace_id, invited_user_id, status);
 `);
 
-const memberColumns = db.prepare("PRAGMA table_info(members)").all();
-if (!memberColumns.some((column) => column.name === "user_id")) {
-  db.exec("ALTER TABLE members ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE");
-}
+try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'Member'"); } catch {}
+try { db.exec("ALTER TABLE tasks ADD COLUMN planned_start TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE tasks ADD COLUMN planned_end TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE members ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE"); } catch {}
 
-db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_members_user_id ON members(user_id);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_members_workspace_user_unique ON members(workspace_id, user_id);
-`);
-
-// Backfill member.user_id from matching registered email for older databases.
 db.prepare(`
   UPDATE members
   SET user_id = (
@@ -117,27 +130,6 @@ db.prepare(`
   WHERE user_id IS NULL OR user_id = ''
 `).run();
 
-// Ensure every workspace owner also exists as an owner member record.
-db.prepare(`
-  INSERT INTO members (id, workspace_id, user_id, name, role, email)
-  SELECT
-    'm-' || substr(hex(randomblob(8)), 1, 8),
-    w.id,
-    u.id,
-    u.name,
-    'Owner',
-    u.email
-  FROM workspaces w
-  JOIN users u ON u.id = w.owner_id
-  WHERE NOT EXISTS (
-    SELECT 1
-    FROM members m
-    WHERE m.workspace_id = w.id
-      AND m.user_id = u.id
-  )
-`).run();
-
-// Enforce allowed values even on existing databases whose tables predate CHECK constraints.
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS validate_projects_before_insert
   BEFORE INSERT ON projects
@@ -218,4 +210,53 @@ db.exec(`
   END;
 `);
 
+const ADMIN_EMAIL = "admin@example.com";
+const adminUser = db.prepare("SELECT id FROM users WHERE email = ?").get(ADMIN_EMAIL);
+if (!adminUser) {
+  const hash = bcrypt.hashSync("admin123", 10);
+  const now = new Date().toISOString();
+  db.prepare(
+    "INSERT INTO users (id, email, password_hash, name, role, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run("u-admin", ADMIN_EMAIL, hash, "Admin", "Admin", now);
+}
+db.prepare("UPDATE users SET role = 'Admin' WHERE email = ?").run(ADMIN_EMAIL);
+
+db.prepare(`
+  INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at)
+  SELECT
+    'wm-' || substr(hex(randomblob(8)), 1, 8),
+    w.id,
+    w.owner_id,
+    'Owner',
+    w.created_at
+  FROM workspaces w
+`).run();
+
+db.prepare(`
+  INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at)
+  SELECT
+    'wm-' || substr(hex(randomblob(8)), 1, 8),
+    m.workspace_id,
+    m.user_id,
+    m.role,
+    COALESCE(w.created_at, datetime('now'))
+  FROM members m
+  JOIN workspaces w ON w.id = m.workspace_id
+  WHERE m.user_id IS NOT NULL AND m.user_id <> ''
+`).run();
+
+db.prepare(`
+  INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email)
+  SELECT
+    'm-' || substr(hex(randomblob(8)), 1, 8),
+    wm.workspace_id,
+    wm.user_id,
+    u.name,
+    wm.role,
+    u.email
+  FROM workspace_members wm
+  JOIN users u ON u.id = wm.user_id
+`).run();
+
 export default db;
+export { ADMIN_EMAIL };

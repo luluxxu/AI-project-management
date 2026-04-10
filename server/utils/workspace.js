@@ -9,12 +9,24 @@ export function logActivity(workspaceId, message) {
 }
 
 export function getWorkspaceMembership(workspaceId, userId) {
-  return db.prepare(
-    `SELECT m.id, m.workspace_id, m.user_id, m.role, w.owner_id
-     FROM members m
-     JOIN workspaces w ON w.id = m.workspace_id
-     WHERE m.workspace_id = ? AND m.user_id = ?`
-  ).get(workspaceId, userId);
+  if (!workspaceId || !userId) return null;
+
+  const workspaceMember = db.prepare(`
+    SELECT wm.id, wm.workspace_id, wm.user_id, wm.role, w.owner_id
+    FROM workspace_members wm
+    JOIN workspaces w ON w.id = wm.workspace_id
+    WHERE wm.workspace_id = ? AND wm.user_id = ?
+  `).get(workspaceId, userId);
+  if (workspaceMember) return workspaceMember;
+
+  return (
+    db.prepare(`
+      SELECT m.id, m.workspace_id, m.user_id, m.role, w.owner_id
+      FROM members m
+      JOIN workspaces w ON w.id = m.workspace_id
+      WHERE m.workspace_id = ? AND m.user_id = ?
+    `).get(workspaceId, userId) || null
+  );
 }
 
 export function ensureWorkspaceAccess(res, workspaceId, userId) {
@@ -29,9 +41,22 @@ export function ensureWorkspaceAccess(res, workspaceId, userId) {
 export function ensureWorkspaceOwner(res, workspaceId, userId) {
   const membership = ensureWorkspaceAccess(res, workspaceId, userId);
   if (!membership) return null;
-  if (membership.role !== "Owner" && membership.owner_id !== userId) {
-    res.status(403).json({ error: "Only the team owner can perform this action." });
+  if (!["Owner", "Admin"].includes(membership.role) && membership.owner_id !== userId) {
+    res.status(403).json({ error: "Only a workspace owner or admin can perform this action." });
     return null;
   }
   return membership;
+}
+
+export function getOwnedWorkspace(workspaceId, userId) {
+  return db.prepare("SELECT id FROM workspaces WHERE id = ? AND owner_id = ?").get(workspaceId, userId);
+}
+
+export function ensureOwnedWorkspace(res, workspaceId, userId) {
+  const workspace = getOwnedWorkspace(workspaceId, userId);
+  if (!workspace) {
+    res.status(403).json({ error: "Forbidden" });
+    return null;
+  }
+  return workspace;
 }

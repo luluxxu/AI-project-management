@@ -24,7 +24,7 @@ export function generateDailyPlan(tasks) {
   return [...tasks]
     .filter((task) => task.status !== "Done")
     .sort((a, b) => {
-      const dueCompare = a.dueDate.localeCompare(b.dueDate);
+      const dueCompare = (a.dueDate || "").localeCompare(b.dueDate || "");
       if (dueCompare !== 0) return dueCompare;
       const priorityCompare = priorityScore[b.priority] - priorityScore[a.priority];
       if (priorityCompare !== 0) return priorityCompare;

@@ -2,13 +2,13 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
-import db from "../db.js";
+import db, { ADMIN_EMAIL } from "../db.js";
 import { requireAuth, JWT_SECRET } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
 
 const router = Router();
+const uid = () => randomUUID().slice(0, 8);
 
-// POST /api/auth/register — create a new account and return a JWT
 router.post("/register", route((req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) {
@@ -20,19 +20,19 @@ router.post("/register", route((req, res) => {
     return res.status(409).json({ error: "Email already in use" });
   }
 
-  const id = `u-${randomUUID().slice(0, 8)}`;
+  const id = `u-${uid()}`;
+  const role = email === ADMIN_EMAIL ? "Admin" : "Member";
   const passwordHash = bcrypt.hashSync(password, 10);
   const createdAt = new Date().toISOString();
 
   db.prepare(
-    "INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)"
-  ).run(id, email, passwordHash, name, createdAt);
+    "INSERT INTO users (id, email, password_hash, name, role, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run(id, email, passwordHash, name, role, createdAt);
 
-  const token = jwt.sign({ userId: id, email }, JWT_SECRET, { expiresIn: "7d" });
-  res.status(201).json({ token, user: { id, name, email } });
+  const token = jwt.sign({ userId: id, email, role }, JWT_SECRET, { expiresIn: "7d" });
+  res.status(201).json({ token, user: { id, name, email, role } });
 }));
 
-// POST /api/auth/login — verify credentials and return a JWT
 router.post("/login", route((req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -44,13 +44,15 @@ router.post("/login", route((req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  const token = jwt.sign({ userId: user.id, email }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token, user: { id: user.id, name: user.name, email } });
+  const token = jwt.sign({ userId: user.id, email, role: user.role || "Member" }, JWT_SECRET, { expiresIn: "7d" });
+  res.json({
+    token,
+    user: { id: user.id, name: user.name, email, role: user.role || "Member" },
+  });
 }));
 
-// GET /api/auth/me — return current user info (requires valid token)
 router.get("/me", requireAuth, route((req, res) => {
-  const user = db.prepare("SELECT id, name, email, created_at FROM users WHERE id = ?").get(req.userId);
+  const user = db.prepare("SELECT id, name, email, role, created_at FROM users WHERE id = ?").get(req.userId);
   if (!user) return res.status(404).json({ error: "User not found" });
   res.json(user);
 }));

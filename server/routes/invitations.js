@@ -44,6 +44,9 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
     const existingMember = db.prepare(
       "SELECT id FROM members WHERE workspace_id = ? AND user_id = ?"
     ).get(invitation.workspace_id, req.userId);
+    const existingWorkspaceMember = db.prepare(
+      "SELECT id FROM workspace_members WHERE workspace_id = ? AND user_id = ?"
+    ).get(invitation.workspace_id, req.userId);
 
     if (!existingMember) {
       db.prepare(
@@ -55,6 +58,17 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
         invitation.invited_name,
         invitation.role,
         invitation.invited_email
+      );
+    }
+    if (!existingWorkspaceMember) {
+      db.prepare(
+        "INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)"
+      ).run(
+        uid("wm-"),
+        invitation.workspace_id,
+        req.userId,
+        invitation.role,
+        respondedAt
       );
     }
 

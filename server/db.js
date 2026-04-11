@@ -58,6 +58,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS members (
     id           TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    user_id      TEXT REFERENCES users(id) ON DELETE CASCADE,
     name         TEXT NOT NULL,
     role         TEXT NOT NULL DEFAULT 'Member' CHECK (role IN ('Owner', 'Admin', 'Member')),
     email        TEXT NOT NULL
@@ -94,6 +95,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
   CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
   CREATE INDEX IF NOT EXISTS idx_members_workspace_id ON members(workspace_id);
+  CREATE INDEX IF NOT EXISTS idx_members_user_id ON members(user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_members_workspace_user_unique ON members(workspace_id, user_id);
   CREATE INDEX IF NOT EXISTS idx_activities_workspace_id_created_at ON activities(workspace_id, created_at DESC);
 `);
 
@@ -152,6 +155,22 @@ db.exec(`
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'Member'"); } catch { /* column already exists */ }
 try { db.exec("ALTER TABLE tasks ADD COLUMN planned_start TEXT DEFAULT ''"); } catch { /* column already exists */ }
 try { db.exec("ALTER TABLE tasks ADD COLUMN planned_end TEXT DEFAULT ''"); } catch { /* column already exists */ }
+try { db.exec("ALTER TABLE members ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE"); } catch { /* column already exists */ }
+
+db.prepare(`
+  UPDATE members
+  SET user_id = (
+    SELECT users.id
+    FROM users
+    WHERE lower(users.email) = lower(members.email)
+  )
+  WHERE (user_id IS NULL OR user_id = '')
+    AND EXISTS (
+      SELECT 1
+      FROM users
+      WHERE lower(users.email) = lower(members.email)
+    )
+`).run();
 
 // ── Seed default admin user ──
 const ADMIN_EMAIL = "admin@example.com";
@@ -178,6 +197,20 @@ for (const row of ownersWithoutMembership) {
     "INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Owner', ?)"
   ).run(`wm-${row.workspace_id}-owner`, row.workspace_id, row.user_id, new Date().toISOString());
 }
+
+// Keep the legacy members table in sync for routes/components that still read from it.
+db.prepare(`
+  INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email)
+  SELECT
+    'm-' || substr(hex(randomblob(8)), 1, 8),
+    wm.workspace_id,
+    wm.user_id,
+    u.name,
+    wm.role,
+    u.email
+  FROM workspace_members wm
+  JOIN users u ON u.id = wm.user_id
+`).run();
 
 export default db;
 export { ADMIN_EMAIL };

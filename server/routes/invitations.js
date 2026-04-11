@@ -2,6 +2,7 @@ import { Router } from "express";
 import db from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
+import { validateInvitationResponsePayload } from "../middleware/validation.js";
 import { logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
@@ -71,10 +72,7 @@ router.get("/", requireAuth, route((req, res) => {
 }));
 
 router.post("/:id/respond", requireAuth, route((req, res) => {
-  const { action } = req.body;
-  if (!["accept", "reject"].includes(action)) {
-    return res.status(400).json({ error: "action must be 'accept' or 'reject'" });
-  }
+  const { action } = validateInvitationResponsePayload(req.body);
 
   const invitation = db.prepare("SELECT * FROM invitations WHERE id = ?").get(req.params.id);
   if (!invitation) return res.status(404).json({ error: "Invitation not found" });

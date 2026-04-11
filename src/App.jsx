@@ -84,19 +84,20 @@ function AuthenticatedApp() {
   }
 
   return (
-    <div className="grid grid-cols-[280px_1fr] max-md:grid-cols-1 min-h-screen">
-      <aside className="p-6 bg-slate-900 text-slate-50 flex flex-col gap-5">
+    <div className="grid min-h-screen grid-cols-[292px_1fr] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.92)_35%,_rgba(226,232,240,0.9)_100%)] max-md:grid-cols-1">
+      <aside className="m-4 flex flex-col gap-5 rounded-[28px] border border-white/10 bg-slate-950/95 p-6 text-slate-50 shadow-[0_24px_60px_rgba(15,23,42,0.34)] max-md:m-0 max-md:rounded-none max-md:border-0">
         <div>
-          <div className="text-2xl font-extrabold">TaskPilot AI</div>
-          <p className="text-slate-500">Project management platform</p>
+          <div className="text-2xl font-extrabold tracking-tight">TaskPilot AI</div>
+          <p className="mt-1 text-sm text-slate-400">Project management platform</p>
         </div>
 
-        <div className="bg-white text-gray-900 rounded-2xl shadow-lg p-4 grid gap-3">
-          <label>Workspace</label>
+        <div className="grid gap-3 rounded-3xl border border-slate-800 bg-white/98 p-4 text-gray-900 shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+          <label className="text-sm font-semibold text-slate-600">Workspace</label>
           {store.data.workspaces.length > 0 ? (
             <select
               value={store.activeWorkspaceId}
               onChange={(e) => store.setActiveWorkspace(e.target.value)}
+              className="border-slate-200 bg-slate-50/80"
             >
               {store.data.workspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
@@ -107,7 +108,7 @@ function AuthenticatedApp() {
           ) : (
             <p className="text-slate-500 text-sm">No workspaces yet</p>
           )}
-          <button className="bg-slate-200 hover:bg-slate-300 text-slate-900 transition" onClick={store.createWorkspace}>
+          <button className="bg-slate-900 text-white hover:bg-slate-800 transition" onClick={store.createWorkspace}>
             + New Workspace
           </button>
         </div>
@@ -119,7 +120,7 @@ function AuthenticatedApp() {
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `px-4 py-3 rounded-xl text-slate-300 hover:bg-white/10 hover:text-white transition${isActive ? " bg-white/10 text-white" : ""}`
+                `px-4 py-3 rounded-2xl text-slate-300 hover:bg-white/8 hover:text-white transition duration-200 ${isActive ? " bg-white text-slate-950 shadow-sm" : ""}`
               }
             >
               {label}
@@ -135,7 +136,7 @@ function AuthenticatedApp() {
                   key={to}
                   to={to}
                   className={({ isActive }) =>
-                    `px-4 py-3 rounded-xl text-slate-300 hover:bg-white/10 hover:text-white transition${isActive ? " bg-white/10 text-white" : ""}`
+                    `px-4 py-3 rounded-2xl text-slate-300 hover:bg-white/8 hover:text-white transition duration-200 ${isActive ? " bg-white text-slate-950 shadow-sm" : ""}`
                   }
                 >
                   {label}
@@ -146,25 +147,25 @@ function AuthenticatedApp() {
         </nav>
 
         {/* User info + logout at bottom */}
-        <div style={{ marginTop: "auto", paddingTop: "1rem", borderTop: "1px solid #e5e7eb" }}>
-          <p className="text-slate-500" style={{ fontSize: "0.8rem", marginBottom: "0.25rem" }}>
+        <div style={{ marginTop: "auto", paddingTop: "1rem", borderTop: "1px solid rgba(148, 163, 184, 0.2)" }}>
+          <p className="text-slate-300" style={{ fontSize: "0.84rem", marginBottom: "0.25rem" }}>
             {user?.name || user?.email}
           </p>
-          <p className="text-slate-500" style={{ fontSize: "0.7rem", marginBottom: "0.5rem" }}>
+          <p className="text-slate-500" style={{ fontSize: "0.74rem", marginBottom: "0.75rem" }}>
             {user?.role || "Member"}
           </p>
-          <button className="bg-slate-200 hover:bg-slate-300 transition text-slate-900" onClick={logout}>
+          <button className="w-full bg-white/8 border border-white/10 hover:bg-white/12 transition text-white" onClick={logout}>
             Log out
           </button>
         </div>
       </aside>
 
-      <main className="p-6 grid gap-4 overflow-auto">
+      <main className="grid gap-5 overflow-auto p-6 max-md:p-4">
         {store.data.workspaces.length > 0 && (
-          <header className="flex justify-between items-center gap-4">
-            <div>
-              <h1>{store.activeWorkspace?.name || "Workspace"}</h1>
-              <p className="text-slate-500">
+          <header className="flex items-center justify-between gap-4 rounded-[28px] border border-white/50 bg-white/78 px-6 py-5 shadow-[0_18px_40px_rgba(148,163,184,0.14)] backdrop-blur-md max-md:flex-col max-md:items-start">
+            <div className="min-w-0">
+              <h1 className="m-0 text-[2rem] font-semibold tracking-tight text-slate-900">{store.activeWorkspace?.name || "Workspace"}</h1>
+              <p className="mt-1 text-slate-500">
                 Keep projects, tasks, deadlines, and team updates in one place.
               </p>
             </div>

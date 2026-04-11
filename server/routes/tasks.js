@@ -2,6 +2,7 @@ import { Router } from "express";
 import db from "../db.js";
 import { requireAuth, requireWorkspaceAccess, canAccessWorkspace } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
+import { validateTaskPayload } from "../middleware/validation.js";
 import { logActivity, uid } from "../utils/workspace.js";
 import { deleteTaskNotifications, syncTaskNotifications } from "../utils/notifications.js";
 
@@ -66,8 +67,7 @@ router.post("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res
     effort = 2,
     plannedStart = "",
     plannedEnd = "",
-  } = req.body;
-  if (!projectId || !title) return res.status(400).json({ error: "projectId and title are required" });
+  } = validateTaskPayload(req.body);
 
   const created = createTaskTx(req.params.wsId, {
     projectId,
@@ -91,6 +91,7 @@ router.patch("/:id", requireAuth, route((req, res) => {
     return res.status(403).json({ error: "Forbidden" });
   }
 
+  const payload = validateTaskPayload(req.body, { partial: true });
   const colMap = {
     title: "title",
     description: "description",
@@ -106,12 +107,11 @@ router.patch("/:id", requireAuth, route((req, res) => {
   const updates = [];
   const values = [];
   for (const [bodyKey, col] of Object.entries(colMap)) {
-    if (req.body[bodyKey] !== undefined) {
+    if (payload[bodyKey] !== undefined) {
       updates.push(`${col} = ?`);
-      values.push(req.body[bodyKey]);
+      values.push(payload[bodyKey]);
     }
   }
-  if (!updates.length) return res.status(400).json({ error: "No fields to update" });
 
   const updated = updateTaskTx(req.params.id, task.workspace_id, updates, values);
   res.json(updated);

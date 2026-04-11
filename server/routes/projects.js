@@ -4,11 +4,34 @@ import { requireAuth, requireWorkspaceAccess, canAccessWorkspace } from "../midd
 import { route } from "../middleware/error.js";
 import { validateProjectPayload } from "../middleware/validation.js";
 import { logActivity, uid } from "../utils/workspace.js";
+import { syncTaskNotifications } from "../utils/notifications.js";
 
 const router = Router();
 
+const setProjectArchivedStateTx = db.transaction((project, archivedAt) => {
+  db.prepare("UPDATE projects SET archived_at = ? WHERE id = ?").run(archivedAt, project.id);
+  db.prepare("UPDATE tasks SET archived_at = ? WHERE project_id = ?").run(archivedAt, project.id);
+
+  if (archivedAt) {
+    db.prepare("DELETE FROM notifications WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)").run(project.id);
+    logActivity(project.workspace_id, `Project '${project.name}' archived.`);
+  } else {
+    const tasks = db.prepare("SELECT id FROM tasks WHERE project_id = ?").all(project.id);
+    for (const task of tasks) {
+      syncTaskNotifications(task.id);
+    }
+    logActivity(project.workspace_id, `Project '${project.name}' restored.`);
+  }
+});
+
 router.get("/:wsId/projects", requireAuth, requireWorkspaceAccess, route((req, res) => {
-  const projects = db.prepare("SELECT * FROM projects WHERE workspace_id = ?").all(req.params.wsId);
+  const includeArchived = req.query.includeArchived === "true";
+  const projects = db.prepare(`
+    SELECT *
+    FROM projects
+    WHERE workspace_id = ?
+      AND (? = 1 OR archived_at IS NULL)
+  `).all(req.params.wsId, includeArchived ? 1 : 0);
   res.json(projects);
 }));
 
@@ -57,6 +80,31 @@ router.patch("/:id", requireAuth, route((req, res) => {
   db.prepare(`UPDATE projects SET ${updates.join(", ")} WHERE id = ?`).run(...values);
   logActivity(project.workspace_id, "Project updated.");
   res.json(db.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id));
+}));
+
+router.post("/:id/archive", requireAuth, route((req, res) => {
+  const project = db.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+  if (!project) return res.status(404).json({ error: "Not found" });
+  if (!canAccessWorkspace(project.workspace_id, req.userId, req.userRole)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  if (project.archived_at) return res.status(400).json({ error: "Project is already archived" });
+
+  const archivedAt = new Date().toISOString();
+  setProjectArchivedStateTx(project, archivedAt);
+  res.json({ ok: true, archivedAt });
+}));
+
+router.post("/:id/restore", requireAuth, route((req, res) => {
+  const project = db.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+  if (!project) return res.status(404).json({ error: "Not found" });
+  if (!canAccessWorkspace(project.workspace_id, req.userId, req.userRole)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  if (!project.archived_at) return res.status(400).json({ error: "Project is not archived" });
+
+  setProjectArchivedStateTx(project, null);
+  res.json({ ok: true });
 }));
 
 router.delete("/:id", requireAuth, route((req, res) => {

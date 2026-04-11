@@ -1,6 +1,6 @@
 export function getWorkspaceSnapshot(data, workspaceId) {
-  const projects = data.projects.filter((project) => project.workspaceId === workspaceId);
-  const tasks = data.tasks.filter((task) => task.workspaceId === workspaceId);
+  const projects = data.projects.filter((project) => project.workspaceId === workspaceId && !project.archivedAt);
+  const tasks = data.tasks.filter((task) => task.workspaceId === workspaceId && !task.archivedAt);
   const members = data.members.filter((member) => member.workspaceId === workspaceId);
   const done = tasks.filter((task) => task.status === "Done").length;
   const overdue = tasks.filter((task) => task.status !== "Done" && task.dueDate < new Date().toISOString().slice(0, 10)).length;

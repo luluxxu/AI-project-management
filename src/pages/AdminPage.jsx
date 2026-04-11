@@ -8,10 +8,11 @@ export default function AdminPage({ store }) {
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const loadWorkspaces = useCallback(() => {
     setLoading(true);
-    apiFetch("/workspaces")
+    apiFetch("/workspaces?includeArchived=true")
       .then(setWorkspaces)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -38,6 +39,37 @@ export default function AdminPage({ store }) {
     }
   };
 
+  const handleArchive = async (id, name) => {
+    const accepted = await confirm({
+      title: "Archive workspace?",
+      message: `Archive workspace "${name}"? Its projects and tasks will be hidden until restored.`,
+      confirmLabel: "Archive workspace",
+    });
+    if (!accepted) return;
+
+    try {
+      const response = await apiFetch(`/workspaces/${id}/archive`, { method: "POST" });
+      setWorkspaces((prev) => prev.map((workspace) => (workspace.id === id ? { ...workspace, archived_at: response.archivedAt } : workspace)));
+      toast.success("Workspace archived");
+    } catch (e) {
+      setError(e.message);
+      toast.error(e.message || "Failed to archive workspace");
+    }
+  };
+
+  const handleRestore = async (id) => {
+    try {
+      await apiFetch(`/workspaces/${id}/restore`, { method: "POST" });
+      setWorkspaces((prev) => prev.map((workspace) => (workspace.id === id ? { ...workspace, archived_at: null } : workspace)));
+      toast.success("Workspace restored");
+    } catch (e) {
+      setError(e.message);
+      toast.error(e.message || "Failed to restore workspace");
+    }
+  };
+
+  const visibleWorkspaces = workspaces.filter((workspace) => showArchived ? !!workspace.archived_at : !workspace.archived_at);
+
   return (
     <div className="grid gap-4">
       <div className="bg-white rounded-2xl shadow-lg p-4">
@@ -46,12 +78,18 @@ export default function AdminPage({ store }) {
             <h2 className="text-lg font-semibold">All Workspaces</h2>
             <p className="text-slate-500 text-sm">Manage all workspaces across the platform</p>
           </div>
-          <button
-            className="bg-slate-200 hover:bg-slate-300 text-slate-900 transition rounded-xl px-4 py-2 text-sm"
-            onClick={store.createWorkspace}
-          >
-            + New Workspace
-          </button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+              Show archived
+            </label>
+            <button
+              className="bg-slate-200 hover:bg-slate-300 text-slate-900 transition rounded-xl px-4 py-2 text-sm"
+              onClick={store.createWorkspace}
+            >
+              + New Workspace
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -60,7 +98,7 @@ export default function AdminPage({ store }) {
 
         {loading ? (
           <p className="text-slate-400 text-sm py-4">Loading workspaces…</p>
-        ) : workspaces.length === 0 ? (
+        ) : visibleWorkspaces.length === 0 ? (
           <p className="text-slate-400 text-sm py-4">No workspaces found.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -75,7 +113,7 @@ export default function AdminPage({ store }) {
                 </tr>
               </thead>
               <tbody>
-                {workspaces.map((ws) => (
+                {visibleWorkspaces.map((ws) => (
                   <tr key={ws.id} className="hover:bg-slate-50">
                     <td className="p-3 border-b border-slate-50 font-medium">{ws.name}</td>
                     <td className="p-3 border-b border-slate-50 text-slate-500 text-sm font-mono">{ws.id}</td>
@@ -84,12 +122,29 @@ export default function AdminPage({ store }) {
                       {new Date(ws.created_at).toLocaleDateString()}
                     </td>
                     <td className="p-3 border-b border-slate-50">
-                      <button
-                        className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg px-3 py-1 text-sm transition"
-                        onClick={() => handleDelete(ws.id, ws.name)}
-                      >
-                        Delete
-                      </button>
+                      <div className="flex gap-2">
+                        {showArchived ? (
+                          <button
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 transition hover:bg-slate-50"
+                            onClick={() => handleRestore(ws.id)}
+                          >
+                            Restore
+                          </button>
+                        ) : (
+                          <button
+                            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-sm text-amber-800 transition hover:bg-amber-100"
+                            onClick={() => handleArchive(ws.id, ws.name)}
+                          >
+                            Archive
+                          </button>
+                        )}
+                        <button
+                          className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg px-3 py-1 text-sm transition"
+                          onClick={() => handleDelete(ws.id, ws.name)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

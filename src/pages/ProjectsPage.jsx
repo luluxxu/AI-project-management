@@ -32,11 +32,13 @@ export default function ProjectsPage({ store }) {
   const [taskForm, setTaskForm] = useState({ ...emptyTask, projectId: store.scopedProjects[0]?.id || "" });
   const [selectedProjectId, setSelectedProjectId] = useState(store.scopedProjects[0]?.id || "all");
   const [editingTask, setEditingTask] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const filteredTasks = useMemo(() => {
-    if (selectedProjectId === "all") return store.scopedTasks;
-    return store.scopedTasks.filter((task) => task.projectId === selectedProjectId);
-  }, [selectedProjectId, store.scopedTasks]);
+    const source = showArchived ? store.scopedArchivedTasks : store.scopedTasks;
+    if (selectedProjectId === "all") return source;
+    return source.filter((task) => task.projectId === selectedProjectId);
+  }, [selectedProjectId, showArchived, store.scopedArchivedTasks, store.scopedTasks]);
 
   const handleCreateProject = async () => {
     if (!projectForm.name.trim()) return;
@@ -108,6 +110,31 @@ export default function ProjectsPage({ store }) {
     }
   };
 
+  const handleArchiveProject = async (row) => {
+    const accepted = await confirm({
+      title: "Archive project?",
+      message: `Archive "${row.name}"? Its tasks will be hidden but can be restored later.`,
+      confirmLabel: "Archive project",
+    });
+    if (!accepted) return;
+
+    try {
+      await store.archiveProject(row.id);
+      toast.success("Project archived");
+    } catch (error) {
+      toast.error(error.message || "Failed to archive project");
+    }
+  };
+
+  const handleRestoreProject = async (row) => {
+    try {
+      await store.restoreProject(row.id);
+      toast.success("Project restored");
+    } catch (error) {
+      toast.error(error.message || "Failed to restore project");
+    }
+  };
+
   const handleTaskStatusChange = async (row, status) => {
     if (row.status === status) return;
     const accepted = await confirm({
@@ -139,6 +166,31 @@ export default function ProjectsPage({ store }) {
       toast.success("Task deleted");
     } catch (error) {
       toast.error(error.message || "Failed to delete task");
+    }
+  };
+
+  const handleArchiveTask = async (row) => {
+    const accepted = await confirm({
+      title: "Archive task?",
+      message: `Archive "${row.title}"? It will be hidden but can be restored later.`,
+      confirmLabel: "Archive task",
+    });
+    if (!accepted) return;
+
+    try {
+      await store.archiveTask(row.id);
+      toast.success("Task archived");
+    } catch (error) {
+      toast.error(error.message || "Failed to archive task");
+    }
+  };
+
+  const handleRestoreTask = async (row) => {
+    try {
+      await store.restoreTask(row.id);
+      toast.success("Task restored");
+    } catch (error) {
+      toast.error(error.message || "Failed to restore task");
     }
   };
 
@@ -217,7 +269,16 @@ export default function ProjectsPage({ store }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="Projects" subtitle="Edit status inline or remove finished work">
+      <SectionCard
+        title="Projects"
+        subtitle={showArchived ? "Archived projects can be restored here" : "Edit status inline or archive finished work"}
+        action={
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+            Show archived
+          </label>
+        }
+      >
         <SimpleTable
           columns={[
             { key: "name", label: "Name" },
@@ -237,19 +298,30 @@ export default function ProjectsPage({ store }) {
             },
             { key: "priority", label: "Priority" },
             { key: "endDate", label: "Deadline" },
-            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => handleDeleteProject(row)}>Delete</button> },
+            {
+              key: "actions",
+              label: "Actions",
+              render: (row) => showArchived ? (
+                <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50" onClick={() => handleRestoreProject(row)}>Restore</button>
+              ) : (
+                <div className="flex gap-2">
+                  <button className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-800 transition hover:bg-amber-100" onClick={() => handleArchiveProject(row)}>Archive</button>
+                  <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => handleDeleteProject(row)}>Delete</button>
+                </div>
+              ),
+            },
           ]}
-          rows={store.scopedProjects}
+          rows={showArchived ? store.scopedArchivedProjects : store.scopedProjects}
         />
       </SectionCard>
 
       <SectionCard
         title="Tasks"
-        subtitle="Filter by project and manage task state"
+        subtitle={showArchived ? "Archived tasks can be restored here" : "Filter by project and manage task state"}
         action={
           <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
             <option value="all">All projects</option>
-            {store.scopedProjects.map((project) => (
+            {(showArchived ? store.scopedArchivedProjects : store.scopedProjects).map((project) => (
               <option key={project.id} value={project.id}>{project.name}</option>
             ))}
           </select>
@@ -282,18 +354,35 @@ export default function ProjectsPage({ store }) {
               label: "Actions",
               render: (row) => (
                 <div className="flex gap-2">
-                  <button
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50"
-                    onClick={() => setEditingTask(row)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition"
-                    onClick={() => handleDeleteTask(row)}
-                  >
-                    Delete
-                  </button>
+                  {showArchived ? (
+                    <button
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50"
+                      onClick={() => handleRestoreTask(row)}
+                    >
+                      Restore
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50"
+                        onClick={() => setEditingTask(row)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-800 transition hover:bg-amber-100"
+                        onClick={() => handleArchiveTask(row)}
+                      >
+                        Archive
+                      </button>
+                      <button
+                        className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition"
+                        onClick={() => handleDeleteTask(row)}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               ),
             },

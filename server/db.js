@@ -258,6 +258,28 @@ const migrations = [
       db.exec("DROP TABLE members");
     },
   },
+  {
+    version: 5,
+    name: "add_archive_columns",
+    up: () => {
+      if (!columnExists("workspaces", "archived_at")) {
+        db.exec("ALTER TABLE workspaces ADD COLUMN archived_at TEXT");
+      }
+      if (!columnExists("projects", "archived_at")) {
+        db.exec("ALTER TABLE projects ADD COLUMN archived_at TEXT");
+      }
+      if (!columnExists("tasks", "archived_at")) {
+        db.exec("ALTER TABLE tasks ADD COLUMN archived_at TEXT");
+      }
+
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_workspaces_archived_at ON workspaces(archived_at);
+        CREATE INDEX IF NOT EXISTS idx_projects_workspace_archived_at ON projects(workspace_id, archived_at);
+        CREATE INDEX IF NOT EXISTS idx_tasks_workspace_archived_at ON tasks(workspace_id, archived_at);
+        CREATE INDEX IF NOT EXISTS idx_tasks_project_archived_at ON tasks(project_id, archived_at);
+      `);
+    },
+  },
 ];
 
 function applyMigrations() {

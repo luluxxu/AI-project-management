@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import { apiFetch } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function UsersPage() {
   const { isAdmin, user: currentUser } = useAuth();
+  const { confirm } = useConfirmDialog();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,24 +23,45 @@ export default function UsersPage() {
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const handleRoleChange = async (userId, newRole) => {
+    const userRecord = users.find((entry) => entry.id === userId);
+    if (!userRecord || userRecord.role === newRole) return;
+
+    const accepted = await confirm({
+      title: "Change user role?",
+      message: `Change ${userRecord.name} from ${userRecord.role} to ${newRole}?`,
+      confirmLabel: "Update role",
+    });
+    if (!accepted) return;
+
     try {
       const updated = await apiFetch(`/users/${userId}`, {
         method: "PATCH",
         body: JSON.stringify({ role: newRole }),
       });
       setUsers((prev) => prev.map((u) => (u.id === userId ? updated : u)));
+      toast.success("User role updated");
     } catch (e) {
       setError(e.message);
+      toast.error(e.message || "Failed to update user");
     }
   };
 
   const handleDelete = async (userId, name) => {
-    if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return;
+    const accepted = await confirm({
+      title: "Delete user?",
+      message: `Delete user "${name}"? This cannot be undone.`,
+      confirmLabel: "Delete user",
+      tone: "danger",
+    });
+    if (!accepted) return;
+
     try {
       await apiFetch(`/users/${userId}`, { method: "DELETE" });
       setUsers((prev) => prev.filter((u) => u.id !== userId));
+      toast.success("User deleted");
     } catch (e) {
       setError(e.message);
+      toast.error(e.message || "Failed to delete user");
     }
   };
 

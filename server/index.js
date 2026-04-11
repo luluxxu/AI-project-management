@@ -8,6 +8,7 @@ import projectRoutes    from "./routes/projects.js";
 import taskRoutes       from "./routes/tasks.js";
 import memberRoutes     from "./routes/members.js";
 import activityRoutes   from "./routes/activities.js";
+import invitationRoutes from "./routes/invitations.js";
 import userRoutes       from "./routes/users.js";
 import aiRoutes         from "./routes/ai.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
@@ -27,6 +28,7 @@ app.use("/api/v1/projects",   projectRoutes);
 app.use("/api/v1/tasks",      taskRoutes);
 app.use("/api/v1/members",    memberRoutes);
 app.use("/api/v1/activities", activityRoutes);
+app.use("/api/v1/invitations", invitationRoutes);
 app.use("/api/v1/users",      userRoutes);
 app.use("/api/v1/ai",         aiRoutes);
 

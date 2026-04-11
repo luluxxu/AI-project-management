@@ -8,8 +8,6 @@ export function logActivity(workspaceId, message) {
     .run(uid("a-"), workspaceId, message, new Date().toISOString());
 }
 
-<<<<<<< HEAD
-=======
 export function getWorkspaceMembership(workspaceId, userId) {
   if (!workspaceId || !userId) return null;
 
@@ -50,7 +48,6 @@ export function ensureWorkspaceOwner(res, workspaceId, userId) {
   return membership;
 }
 
->>>>>>> 15f72fd4 (update members.js)
 export function getOwnedWorkspace(workspaceId, userId) {
   return db.prepare("SELECT id FROM workspaces WHERE id = ? AND owner_id = ?").get(workspaceId, userId);
 }

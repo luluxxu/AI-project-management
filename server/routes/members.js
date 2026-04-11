@@ -1,16 +1,5 @@
 import { Router } from "express";
 import db from "../db.js";
-<<<<<<< HEAD
-import { requireAuth, requireWorkspaceAccess } from "../middleware/auth.js";
-import { route } from "../middleware/error.js";
-
-const router = Router();
-
-// GET /api/v1/members/:wsId/members
-// Returns workspace_members joined with users (replaces old members table)
-router.get("/:wsId/members", requireAuth, requireWorkspaceAccess, route((req, res) => {
-  const members = db.prepare(`
-=======
 import { requireAuth, canAccessWorkspace, getWorkspaceMembership } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
 import { logActivity } from "../utils/workspace.js";
@@ -19,16 +8,10 @@ const router = Router();
 
 const listMembers = (workspaceId) =>
   db.prepare(`
->>>>>>> 15f72fd4 (update members.js)
     SELECT wm.id, wm.workspace_id, wm.user_id, wm.role, wm.joined_at, u.name, u.email
     FROM workspace_members wm
     JOIN users u ON u.id = wm.user_id
     WHERE wm.workspace_id = ?
-<<<<<<< HEAD
-    ORDER BY wm.joined_at
-  `).all(req.params.wsId);
-  res.json(members);
-=======
 
     UNION ALL
 
@@ -137,7 +120,6 @@ router.delete("/:id", requireAuth, route((req, res) => {
 
   logActivity(workspaceId, "Member removed.");
   res.json({ ok: true });
->>>>>>> 15f72fd4 (update members.js)
 }));
 
 export default router;

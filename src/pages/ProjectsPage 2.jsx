@@ -23,7 +23,6 @@ const emptyTask = {
 };
 
 export default function ProjectsPage({ store }) {
-  const teamName = store.activeWorkspace?.name || "Current team";
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [taskForm, setTaskForm] = useState({ ...emptyTask, projectId: store.scopedProjects[0]?.id || "" });
   const [selectedProjectId, setSelectedProjectId] = useState(store.scopedProjects[0]?.id || "all");
@@ -36,7 +35,7 @@ export default function ProjectsPage({ store }) {
   return (
     <div className="page-grid">
       <div className="two-col-grid">
-        <SectionCard title="Create Project" subtitle={`Add a new project for ${teamName}`}>
+        <SectionCard title="Create Project" subtitle="Add a new project to the current workspace">
           <div className="form-grid">
             <input placeholder="Project name" value={projectForm.name} onChange={(e) => setProjectForm((prev) => ({ ...prev, name: e.target.value }))} />
             <input placeholder="Description" value={projectForm.description} onChange={(e) => setProjectForm((prev) => ({ ...prev, description: e.target.value }))} />
@@ -55,7 +54,7 @@ export default function ProjectsPage({ store }) {
             <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, startDate: e.target.value }))} />
             <input type="date" value={projectForm.endDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, endDate: e.target.value }))} />
             <button
-              className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
+              className="primary-btn"
               onClick={() => {
                 if (!projectForm.name.trim()) return;
                 store.addProject(projectForm);
@@ -67,7 +66,7 @@ export default function ProjectsPage({ store }) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Create Task" subtitle={`Capture shared tasks for ${teamName}`}>
+        <SectionCard title="Create Task" subtitle="Capture and assign project tasks">
           <div className="form-grid">
             <select value={taskForm.projectId} onChange={(e) => setTaskForm((prev) => ({ ...prev, projectId: e.target.value }))}>
               <option value="">Choose project</option>
@@ -90,13 +89,13 @@ export default function ProjectsPage({ store }) {
             <select value={taskForm.assigneeId} onChange={(e) => setTaskForm((prev) => ({ ...prev, assigneeId: e.target.value }))}>
               <option value="">Unassigned</option>
               {store.scopedMembers.map((member) => (
-                <option key={member.userId || member.id} value={member.userId || member.id}>{member.name}</option>
+                <option key={member.id} value={member.id}>{member.name}</option>
               ))}
             </select>
             <input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
             <input type="number" min="1" max="8" value={taskForm.effort} onChange={(e) => setTaskForm((prev) => ({ ...prev, effort: Number(e.target.value) }))} />
             <button
-              className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
+              className="primary-btn"
               onClick={() => {
                 if (!taskForm.projectId || !taskForm.title.trim()) return;
                 store.addTask(taskForm);
@@ -113,23 +112,14 @@ export default function ProjectsPage({ store }) {
         <SimpleTable
           columns={[
             { key: "name", label: "Name" },
-            { key: "team", label: "Team", render: () => teamName },
-            {
-              key: "status",
-              label: "Status",
-              render: (row) => (
-                <select value={row.status} onChange={(e) => store.updateProject(row.id, { status: e.target.value })}>
-                  <option>Planning</option>
-                  <option>Active</option>
-                  <option>Completed</option>
-                  <option>On Hold</option>
-                  <option>Cancelled</option>
-                </select>
-              ),
-            },
+            { key: "status", label: "Status", render: (row) => (
+              <select value={row.status} onChange={(e) => store.updateProject(row.id, { status: e.target.value })}>
+                <option>Planning</option><option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option>
+              </select>
+            ) },
             { key: "priority", label: "Priority" },
             { key: "endDate", label: "Deadline" },
-            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => store.deleteProject(row.id)}>Delete</button> },
+            { key: "actions", label: "Actions", render: (row) => <button className="danger-btn" onClick={() => store.deleteProject(row.id)}>Delete</button> },
           ]}
           rows={store.scopedProjects}
         />
@@ -150,26 +140,15 @@ export default function ProjectsPage({ store }) {
         <SimpleTable
           columns={[
             { key: "title", label: "Task" },
-            { key: "team", label: "Team", render: () => teamName },
-            {
-              key: "status",
-              label: "Status",
-              render: (row) => (
-                <select value={row.status} onChange={(e) => store.updateTask(row.id, { status: e.target.value })}>
-                  <option>Todo</option>
-                  <option>In Progress</option>
-                  <option>Done</option>
-                </select>
-              ),
-            },
+            { key: "status", label: "Status", render: (row) => (
+              <select value={row.status} onChange={(e) => store.updateTask(row.id, { status: e.target.value })}>
+                <option>Todo</option><option>In Progress</option><option>Done</option>
+              </select>
+            ) },
             { key: "priority", label: "Priority" },
             { key: "dueDate", label: "Due" },
-            {
-              key: "assigneeId",
-              label: "Assignee",
-              render: (row) => store.scopedMembers.find((member) => (member.userId || member.id) === row.assigneeId)?.name || "Unassigned",
-            },
-            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => store.deleteTask(row.id)}>Delete</button> },
+            { key: "assigneeId", label: "Assignee", render: (row) => store.scopedMembers.find((member) => member.id === row.assigneeId)?.name || "Unassigned" },
+            { key: "actions", label: "Actions", render: (row) => <button className="danger-btn" onClick={() => store.deleteTask(row.id)}>Delete</button> },
           ]}
           rows={filteredTasks}
         />

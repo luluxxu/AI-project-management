@@ -30,15 +30,9 @@ export function requireAdmin(req, res, next) {
 export function getWorkspaceMembership(workspaceId, userId) {
   if (!workspaceId || !userId) return null;
 
-  const workspaceMember = db.prepare(
+  return db.prepare(
     "SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?"
   ).get(workspaceId, userId);
-  if (workspaceMember) return workspaceMember;
-
-  return (
-    db.prepare("SELECT role FROM members WHERE workspace_id = ? AND user_id = ?").get(workspaceId, userId) ||
-    null
-  );
 }
 
 export function canAccessWorkspace(workspaceId, userId, platformRole) {

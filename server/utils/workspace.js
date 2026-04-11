@@ -11,22 +11,12 @@ export function logActivity(workspaceId, message) {
 export function getWorkspaceMembership(workspaceId, userId) {
   if (!workspaceId || !userId) return null;
 
-  const workspaceMember = db.prepare(`
+  return db.prepare(`
     SELECT wm.id, wm.workspace_id, wm.user_id, wm.role, w.owner_id
     FROM workspace_members wm
     JOIN workspaces w ON w.id = wm.workspace_id
     WHERE wm.workspace_id = ? AND wm.user_id = ?
   `).get(workspaceId, userId);
-  if (workspaceMember) return workspaceMember;
-
-  return (
-    db.prepare(`
-      SELECT m.id, m.workspace_id, m.user_id, m.role, w.owner_id
-      FROM members m
-      JOIN workspaces w ON w.id = m.workspace_id
-      WHERE m.workspace_id = ? AND m.user_id = ?
-    `).get(workspaceId, userId) || null
-  );
 }
 
 export function ensureWorkspaceAccess(res, workspaceId, userId) {

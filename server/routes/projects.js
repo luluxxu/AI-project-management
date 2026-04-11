@@ -2,6 +2,7 @@ import { Router } from "express";
 import db from "../db.js";
 import { requireAuth, requireWorkspaceAccess, canAccessWorkspace } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
+import { validateProjectPayload } from "../middleware/validation.js";
 import { logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
@@ -12,8 +13,14 @@ router.get("/:wsId/projects", requireAuth, requireWorkspaceAccess, route((req, r
 }));
 
 router.post("/:wsId/projects", requireAuth, requireWorkspaceAccess, route((req, res) => {
-  const { name, description = "", status = "Planning", priority = "Medium", startDate = "", endDate = "" } = req.body;
-  if (!name) return res.status(400).json({ error: "name is required" });
+  const {
+    name,
+    description = "",
+    status = "Planning",
+    priority = "Medium",
+    startDate = "",
+    endDate = "",
+  } = validateProjectPayload(req.body);
 
   const id = uid("p-");
   db.prepare(
@@ -31,20 +38,20 @@ router.patch("/:id", requireAuth, route((req, res) => {
     return res.status(403).json({ error: "Forbidden" });
   }
 
+  const payload = validateProjectPayload(req.body, { partial: true });
   const fields = ["name", "description", "status", "priority", "start_date", "end_date"];
   const updates = [];
   const values = [];
   for (const field of fields) {
     const bodyKey = field.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-    if (req.body[bodyKey] !== undefined) {
+    if (payload[bodyKey] !== undefined) {
       updates.push(`${field} = ?`);
-      values.push(req.body[bodyKey]);
-    } else if (req.body[field] !== undefined) {
+      values.push(payload[bodyKey]);
+    } else if (payload[field] !== undefined) {
       updates.push(`${field} = ?`);
-      values.push(req.body[field]);
+      values.push(payload[field]);
     }
   }
-  if (!updates.length) return res.status(400).json({ error: "No fields to update" });
 
   values.push(req.params.id);
   db.prepare(`UPDATE projects SET ${updates.join(", ")} WHERE id = ?`).run(...values);

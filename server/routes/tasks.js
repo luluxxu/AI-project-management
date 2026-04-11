@@ -7,6 +7,48 @@ import { deleteTaskNotifications, syncTaskNotifications } from "../utils/notific
 
 const router = Router();
 
+const createTaskTx = db.transaction((workspaceId, taskInput) => {
+  const id = uid("t-");
+  db.prepare(
+    "INSERT INTO tasks (id, workspace_id, project_id, title, description, status, priority, assignee_id, due_date, effort, planned_start, planned_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(
+    id,
+    workspaceId,
+    taskInput.projectId,
+    taskInput.title,
+    taskInput.description,
+    taskInput.status,
+    taskInput.priority,
+    taskInput.assigneeId,
+    taskInput.dueDate,
+    taskInput.effort,
+    taskInput.plannedStart,
+    taskInput.plannedEnd
+  );
+
+  syncTaskNotifications(id);
+  logActivity(workspaceId, `Task '${taskInput.title}' created.`);
+
+  return {
+    id,
+    workspaceId,
+    ...taskInput,
+  };
+});
+
+const updateTaskTx = db.transaction((taskId, workspaceId, updates, values) => {
+  db.prepare(`UPDATE tasks SET ${updates.join(", ")} WHERE id = ?`).run(...values, taskId);
+  syncTaskNotifications(taskId);
+  logActivity(workspaceId, "Task updated.");
+  return db.prepare("SELECT * FROM tasks WHERE id = ?").get(taskId);
+});
+
+const deleteTaskTx = db.transaction((taskId, workspaceId) => {
+  db.prepare("DELETE FROM tasks WHERE id = ?").run(taskId);
+  deleteTaskNotifications(taskId);
+  logActivity(workspaceId, "Task deleted.");
+});
+
 router.get("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res) => {
   const tasks = db.prepare("SELECT * FROM tasks WHERE workspace_id = ?").all(req.params.wsId);
   res.json(tasks);
@@ -27,17 +69,7 @@ router.post("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res
   } = req.body;
   if (!projectId || !title) return res.status(400).json({ error: "projectId and title are required" });
 
-  const id = uid("t-");
-  db.prepare(
-    "INSERT INTO tasks (id, workspace_id, project_id, title, description, status, priority, assignee_id, due_date, effort, planned_start, planned_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-  ).run(id, req.params.wsId, projectId, title, description, status, priority, assigneeId, dueDate, effort, plannedStart, plannedEnd);
-
-  syncTaskNotifications(id);
-
-  logActivity(req.params.wsId, `Task '${title}' created.`);
-  res.status(201).json({
-    id,
-    workspaceId: req.params.wsId,
+  const created = createTaskTx(req.params.wsId, {
     projectId,
     title,
     description,
@@ -49,6 +81,7 @@ router.post("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res
     plannedStart,
     plannedEnd,
   });
+  res.status(201).json(created);
 }));
 
 router.patch("/:id", requireAuth, route((req, res) => {
@@ -80,11 +113,8 @@ router.patch("/:id", requireAuth, route((req, res) => {
   }
   if (!updates.length) return res.status(400).json({ error: "No fields to update" });
 
-  values.push(req.params.id);
-  db.prepare(`UPDATE tasks SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-  syncTaskNotifications(req.params.id);
-  logActivity(task.workspace_id, "Task updated.");
-  res.json(db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id));
+  const updated = updateTaskTx(req.params.id, task.workspace_id, updates, values);
+  res.json(updated);
 }));
 
 router.delete("/:id", requireAuth, route((req, res) => {
@@ -94,9 +124,7 @@ router.delete("/:id", requireAuth, route((req, res) => {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  db.prepare("DELETE FROM tasks WHERE id = ?").run(req.params.id);
-  deleteTaskNotifications(req.params.id);
-  logActivity(task.workspace_id, "Task deleted.");
+  deleteTaskTx(req.params.id, task.workspace_id);
   res.json({ ok: true });
 }));
 

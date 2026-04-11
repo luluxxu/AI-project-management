@@ -6,6 +6,58 @@ import { logActivity } from "../utils/workspace.js";
 
 const router = Router();
 
+const updateMemberTx = db.transaction((member, workspaceMember, workspaceId, memberId, body) => {
+  if (member) {
+    const fields = ["name", "role", "email"];
+    const updates = [];
+    const values = [];
+    for (const field of fields) {
+      if (body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        values.push(body[field]);
+      }
+    }
+    if (!updates.length) {
+      const error = new Error("No fields to update");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    values.push(memberId);
+    db.prepare(`UPDATE members SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+
+    if (member.user_id && body.role !== undefined) {
+      db.prepare("UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?")
+        .run(body.role, workspaceId, member.user_id);
+    }
+  } else {
+    if (body.role === undefined) {
+      const error = new Error("No fields to update");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    db.prepare("UPDATE workspace_members SET role = ? WHERE id = ?").run(body.role, memberId);
+    if (workspaceMember.user_id) {
+      db.prepare("UPDATE members SET role = ? WHERE workspace_id = ? AND user_id = ?")
+        .run(body.role, workspaceId, workspaceMember.user_id);
+    }
+  }
+
+  logActivity(workspaceId, "Member updated.");
+});
+
+const deleteMemberTx = db.transaction((target, workspaceId, memberId) => {
+  db.prepare("DELETE FROM members WHERE id = ?").run(memberId);
+  db.prepare("DELETE FROM workspace_members WHERE id = ?").run(memberId);
+  if (target.user_id) {
+    db.prepare("DELETE FROM members WHERE workspace_id = ? AND user_id = ?").run(workspaceId, target.user_id);
+    db.prepare("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?").run(workspaceId, target.user_id);
+  }
+
+  logActivity(workspaceId, "Member removed.");
+});
+
 const listMembers = (workspaceId) =>
   db.prepare(`
     SELECT wm.id, wm.workspace_id, wm.user_id, wm.role, wm.joined_at, u.name, u.email
@@ -53,35 +105,7 @@ router.patch("/:id", requireAuth, route((req, res) => {
     return res.status(403).json({ error: "Workspace admin access required" });
   }
 
-  if (member) {
-    const fields = ["name", "role", "email"];
-    const updates = [];
-    const values = [];
-    for (const field of fields) {
-      if (req.body[field] !== undefined) {
-        updates.push(`${field} = ?`);
-        values.push(req.body[field]);
-      }
-    }
-    if (!updates.length) return res.status(400).json({ error: "No fields to update" });
-
-    values.push(req.params.id);
-    db.prepare(`UPDATE members SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-
-    if (member.user_id && req.body.role !== undefined) {
-      db.prepare("UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?")
-        .run(req.body.role, workspaceId, member.user_id);
-    }
-  } else {
-    if (req.body.role === undefined) return res.status(400).json({ error: "No fields to update" });
-    db.prepare("UPDATE workspace_members SET role = ? WHERE id = ?").run(req.body.role, req.params.id);
-    if (workspaceMember.user_id) {
-      db.prepare("UPDATE members SET role = ? WHERE workspace_id = ? AND user_id = ?")
-        .run(req.body.role, workspaceId, workspaceMember.user_id);
-    }
-  }
-
-  logActivity(workspaceId, "Member updated.");
+  updateMemberTx(member, workspaceMember, workspaceId, req.params.id, req.body);
   const updated =
     db.prepare("SELECT * FROM members WHERE id = ?").get(req.params.id) ||
     db.prepare(`
@@ -111,14 +135,7 @@ router.delete("/:id", requireAuth, route((req, res) => {
     return res.status(400).json({ error: "The team owner cannot be removed." });
   }
 
-  db.prepare("DELETE FROM members WHERE id = ?").run(req.params.id);
-  db.prepare("DELETE FROM workspace_members WHERE id = ?").run(req.params.id);
-  if (target.user_id) {
-    db.prepare("DELETE FROM members WHERE workspace_id = ? AND user_id = ?").run(workspaceId, target.user_id);
-    db.prepare("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?").run(workspaceId, target.user_id);
-  }
-
-  logActivity(workspaceId, "Member removed.");
+  deleteMemberTx(target, workspaceId, req.params.id);
   res.json({ ok: true });
 }));
 

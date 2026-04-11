@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import toast from "react-hot-toast";
 import { useState, useMemo } from "react";
 import { Bug, CalendarIcon, GitCommit, MessageSquare, Square, Trash, XIcon, Zap } from "lucide-react";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
 
 const typeIcons = {
     BUG: { icon: Bug, color: "text-red-600 dark:text-red-400" },
@@ -18,6 +19,7 @@ const priorityTexts = {
 };
 
 const ProjectTasks = ({ tasks, store }) => {
+    const { confirm } = useConfirmDialog();
     const [selectedTasks, setSelectedTasks] = useState([]);
 
     const [filters, setFilters] = useState({
@@ -62,8 +64,13 @@ const ProjectTasks = ({ tasks, store }) => {
     };
 
     const handleDelete = async () => {
-        const confirm = window.confirm("Are you sure you want to delete the selected tasks?");
-        if (!confirm) return;
+        const accepted = await confirm({
+            title: "Delete selected tasks?",
+            message: `Delete ${selectedTasks.length} selected task${selectedTasks.length === 1 ? "" : "s"}?`,
+            confirmLabel: "Delete tasks",
+            tone: "danger",
+        });
+        if (!accepted) return;
 
         try {
             toast.loading("Deleting tasks...");

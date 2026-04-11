@@ -9,9 +9,11 @@ import taskRoutes       from "./routes/tasks.js";
 import memberRoutes     from "./routes/members.js";
 import activityRoutes   from "./routes/activities.js";
 import invitationRoutes from "./routes/invitations.js";
+import notificationRoutes from "./routes/notifications.js";
 import userRoutes       from "./routes/users.js";
 import aiRoutes         from "./routes/ai.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
+import { syncAllTaskNotifications } from "./utils/notifications.js";
 
 dotenv.config();
 
@@ -29,6 +31,7 @@ app.use("/api/v1/tasks",      taskRoutes);
 app.use("/api/v1/members",    memberRoutes);
 app.use("/api/v1/activities", activityRoutes);
 app.use("/api/v1/invitations", invitationRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/users",      userRoutes);
 app.use("/api/v1/ai",         aiRoutes);
 
@@ -42,6 +45,8 @@ app.get("/", (_, res) => {
 
 // Simple health check
 app.get("/api/v1/health", (_, res) => res.json({ ok: true }));
+
+syncAllTaskNotifications();
 
 app.use(notFoundHandler);
 app.use(errorHandler);

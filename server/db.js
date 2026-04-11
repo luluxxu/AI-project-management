@@ -102,6 +102,19 @@ db.exec(`
     UNIQUE(workspace_id, user_id)
   );
 
+  CREATE TABLE IF NOT EXISTS notifications (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    task_id      TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    type         TEXT NOT NULL,
+    message      TEXT NOT NULL,
+    trigger_date TEXT NOT NULL,
+    created_at   TEXT NOT NULL,
+    read_at      TEXT,
+    UNIQUE(user_id, task_id, type)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
   CREATE INDEX IF NOT EXISTS idx_projects_workspace_id ON projects(workspace_id);
   CREATE INDEX IF NOT EXISTS idx_tasks_workspace_id ON tasks(workspace_id);
@@ -115,6 +128,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_invitations_invited_user_id_status ON invitations(invited_user_id, status);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_invitations_workspace_user_pending_unique
     ON invitations(workspace_id, invited_user_id, status);
+  CREATE INDEX IF NOT EXISTS idx_notifications_user_trigger_date ON notifications(user_id, trigger_date);
+  CREATE INDEX IF NOT EXISTS idx_notifications_workspace_id ON notifications(workspace_id);
 `);
 
 // Validation triggers from teammate's work

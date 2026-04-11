@@ -16,7 +16,12 @@ export default function DashboardPage({ store }) {
       <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
         <MetricCard label="Projects" value={store.analytics.totalProjects} />
         <MetricCard label="Tasks" value={store.analytics.totalTasks} />
-        <MetricCard label="Completion" value={`${store.analytics.completionRate}%`} tone="success" />
+        <MetricCard
+          label="Completion"
+          value={`${store.analytics.completionRate}%`}
+          tone="success"
+          progress={store.analytics.completionRate}
+        />
         <MetricCard label="Overdue" value={store.analytics.overdue} tone={store.analytics.overdue ? "danger" : "default"} />
         <MetricCard label="Team Size" value={store.analytics.teamSize} />
       </div>

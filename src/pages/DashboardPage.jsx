@@ -9,6 +9,7 @@ export default function DashboardPage({ store }) {
     ...project,
     tasks: store.scopedTasks.filter((task) => task.projectId === project.id).length,
   }));
+  const dueSoonNotifications = store.scopedNotifications.slice(0, 4);
 
   return (
     <div className="grid gap-4">
@@ -32,6 +33,37 @@ export default function DashboardPage({ store }) {
           rows={projectRows}
           emptyLabel="Create your first project from the Projects page."
         />
+      </SectionCard>
+
+      <SectionCard title="Due Soon Alerts" subtitle="Unfinished tasks that are approaching their deadlines">
+        {dueSoonNotifications.length > 0 ? (
+          <ul className="grid gap-3 list-none p-0 m-0">
+            {dueSoonNotifications.map((notification) => (
+              <li
+                key={notification.id}
+                className={`flex flex-col gap-2 rounded-xl border p-4 ${notification.readAt ? "border-slate-200 bg-slate-50" : "border-amber-200 bg-amber-50/70"}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <strong>{notification.taskTitle}</strong>
+                  {!notification.readAt ? (
+                    <button type="button" onClick={() => store.markNotificationRead(notification.id)}>
+                      Mark read
+                    </button>
+                  ) : null}
+                </div>
+                <span className="text-slate-600">{notification.message}</span>
+                <div className="flex flex-wrap gap-2 text-sm text-slate-500">
+                  {notification.projectName ? <span>{notification.projectName}</span> : null}
+                  {notification.dueDate ? (
+                    <span>Due {new Date(`${notification.dueDate}T00:00:00`).toLocaleDateString()}</span>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-slate-500 m-0">No task reminders are due yet for this workspace.</p>
+        )}
       </SectionCard>
 
       <div className="grid grid-cols-2 gap-4 max-lg:grid-cols-1">

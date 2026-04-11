@@ -13,6 +13,7 @@ import DiscoverPage from "./pages/DiscoverPage";
 import LoginPage from "./pages/LoginPage";
 import { useProjectStore } from "./utils/useProjectStore";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
 import NotificationCenter from "./components/NotificationCenter";
 
 const links = [
@@ -194,18 +195,20 @@ function AuthenticatedApp() {
 export default function App() {
   return (
     <AuthProvider>
-      <Toaster position="top-right" toastOptions={{ style: { borderRadius: "16px", background: "#0f172a", color: "#f8fafc" } }} />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/*"
-          element={
-            <RequireAuth>
-              <AuthenticatedApp />
-            </RequireAuth>
-          }
-        />
-      </Routes>
+      <ConfirmDialogProvider>
+        <Toaster position="top-right" toastOptions={{ style: { borderRadius: "16px", background: "#0f172a", color: "#f8fafc" } }} />
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/*"
+            element={
+              <RequireAuth>
+                <AuthenticatedApp />
+              </RequireAuth>
+            }
+          />
+        </Routes>
+      </ConfirmDialogProvider>
     </AuthProvider>
   );
 }

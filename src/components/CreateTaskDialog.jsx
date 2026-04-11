@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
 
 export default function CreateTaskDialog({ showCreateTask, setShowCreateTask, projectId, store }) {
+    const { confirm } = useConfirmDialog();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         title: "",
@@ -18,6 +20,13 @@ export default function CreateTaskDialog({ showCreateTask, setShowCreateTask, pr
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.title.trim() || !projectId) return;
+
+        const accepted = await confirm({
+            title: "Create task?",
+            message: `This will create "${formData.title}" in ${store?.activeWorkspace?.name || "the current workspace"}.`,
+            confirmLabel: "Create task",
+        });
+        if (!accepted) return;
 
         setIsSubmitting(true);
         try {

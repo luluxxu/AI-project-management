@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import { apiFetch } from "../utils/api";
 
 export default function AdminPage({ store }) {
+  const { confirm } = useConfirmDialog();
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,12 +20,21 @@ export default function AdminPage({ store }) {
   useEffect(() => { loadWorkspaces(); }, [loadWorkspaces]);
 
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`Delete workspace "${name}"? This will remove all its projects, tasks, and members.`)) return;
+    const accepted = await confirm({
+      title: "Delete workspace?",
+      message: `Delete workspace "${name}"? This will remove all its projects, tasks, and members.`,
+      confirmLabel: "Delete workspace",
+      tone: "danger",
+    });
+    if (!accepted) return;
+
     try {
       await apiFetch(`/workspaces/${id}`, { method: "DELETE" });
       setWorkspaces((prev) => prev.filter((w) => w.id !== id));
+      toast.success("Workspace deleted");
     } catch (e) {
       setError(e.message);
+      toast.error(e.message || "Failed to delete workspace");
     }
   };
 

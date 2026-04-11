@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import SectionCard from "../components/SectionCard";
 import SimpleTable from "../components/SimpleTable";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
 
 const emptyProject = {
   name: "",
@@ -23,6 +25,7 @@ const emptyTask = {
 };
 
 export default function ProjectsPage({ store }) {
+  const { confirm } = useConfirmDialog();
   const teamName = store.activeWorkspace?.name || "Current team";
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [taskForm, setTaskForm] = useState({ ...emptyTask, projectId: store.scopedProjects[0]?.id || "" });
@@ -32,6 +35,110 @@ export default function ProjectsPage({ store }) {
     if (selectedProjectId === "all") return store.scopedTasks;
     return store.scopedTasks.filter((task) => task.projectId === selectedProjectId);
   }, [selectedProjectId, store.scopedTasks]);
+
+  const handleCreateProject = async () => {
+    if (!projectForm.name.trim()) return;
+    const accepted = await confirm({
+      title: "Create project?",
+      message: `This will create "${projectForm.name}" in ${teamName}.`,
+      confirmLabel: "Create project",
+    });
+    if (!accepted) return;
+
+    try {
+      await store.addProject(projectForm);
+      setProjectForm(emptyProject);
+      toast.success("Project created successfully");
+    } catch (error) {
+      toast.error(error.message || "Failed to create project");
+    }
+  };
+
+  const handleCreateTask = async () => {
+    if (!taskForm.projectId || !taskForm.title.trim()) return;
+    const accepted = await confirm({
+      title: "Create task?",
+      message: `This will create "${taskForm.title}" in ${teamName}.`,
+      confirmLabel: "Create task",
+    });
+    if (!accepted) return;
+
+    try {
+      await store.addTask(taskForm);
+      setTaskForm({ ...emptyTask, projectId: taskForm.projectId });
+      toast.success("Task created successfully");
+    } catch (error) {
+      toast.error(error.message || "Failed to create task");
+    }
+  };
+
+  const handleProjectStatusChange = async (row, status) => {
+    if (row.status === status) return;
+    const accepted = await confirm({
+      title: "Update project status?",
+      message: `Change "${row.name}" from ${row.status} to ${status}?`,
+      confirmLabel: "Update status",
+    });
+    if (!accepted) return;
+
+    try {
+      await store.updateProject(row.id, { status });
+      toast.success("Project updated");
+    } catch (error) {
+      toast.error(error.message || "Failed to update project");
+    }
+  };
+
+  const handleDeleteProject = async (row) => {
+    const accepted = await confirm({
+      title: "Delete project?",
+      message: `Delete "${row.name}"? Related tasks will also be removed.`,
+      confirmLabel: "Delete project",
+      tone: "danger",
+    });
+    if (!accepted) return;
+
+    try {
+      await store.deleteProject(row.id);
+      toast.success("Project deleted");
+    } catch (error) {
+      toast.error(error.message || "Failed to delete project");
+    }
+  };
+
+  const handleTaskStatusChange = async (row, status) => {
+    if (row.status === status) return;
+    const accepted = await confirm({
+      title: "Update task status?",
+      message: `Change "${row.title}" from ${row.status} to ${status}?`,
+      confirmLabel: "Update status",
+    });
+    if (!accepted) return;
+
+    try {
+      await store.updateTask(row.id, { status });
+      toast.success("Task updated");
+    } catch (error) {
+      toast.error(error.message || "Failed to update task");
+    }
+  };
+
+  const handleDeleteTask = async (row) => {
+    const accepted = await confirm({
+      title: "Delete task?",
+      message: `Delete "${row.title}" from this project?`,
+      confirmLabel: "Delete task",
+      tone: "danger",
+    });
+    if (!accepted) return;
+
+    try {
+      await store.deleteTask(row.id);
+      toast.success("Task deleted");
+    } catch (error) {
+      toast.error(error.message || "Failed to delete task");
+    }
+  };
 
   return (
     <div className="page-grid">
@@ -56,11 +163,7 @@ export default function ProjectsPage({ store }) {
             <input type="date" value={projectForm.endDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, endDate: e.target.value }))} />
             <button
               className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
-              onClick={() => {
-                if (!projectForm.name.trim()) return;
-                store.addProject(projectForm);
-                setProjectForm(emptyProject);
-              }}
+              onClick={handleCreateProject}
             >
               Save Project
             </button>
@@ -97,11 +200,7 @@ export default function ProjectsPage({ store }) {
             <input type="number" min="1" max="8" value={taskForm.effort} onChange={(e) => setTaskForm((prev) => ({ ...prev, effort: Number(e.target.value) }))} />
             <button
               className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
-              onClick={() => {
-                if (!taskForm.projectId || !taskForm.title.trim()) return;
-                store.addTask(taskForm);
-                setTaskForm({ ...emptyTask, projectId: taskForm.projectId });
-              }}
+              onClick={handleCreateTask}
             >
               Save Task
             </button>
@@ -118,7 +217,7 @@ export default function ProjectsPage({ store }) {
               key: "status",
               label: "Status",
               render: (row) => (
-                <select value={row.status} onChange={(e) => store.updateProject(row.id, { status: e.target.value })}>
+                <select value={row.status} onChange={(e) => handleProjectStatusChange(row, e.target.value)}>
                   <option>Planning</option>
                   <option>Active</option>
                   <option>Completed</option>
@@ -129,7 +228,7 @@ export default function ProjectsPage({ store }) {
             },
             { key: "priority", label: "Priority" },
             { key: "endDate", label: "Deadline" },
-            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => store.deleteProject(row.id)}>Delete</button> },
+            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => handleDeleteProject(row)}>Delete</button> },
           ]}
           rows={store.scopedProjects}
         />
@@ -155,7 +254,7 @@ export default function ProjectsPage({ store }) {
               key: "status",
               label: "Status",
               render: (row) => (
-                <select value={row.status} onChange={(e) => store.updateTask(row.id, { status: e.target.value })}>
+                <select value={row.status} onChange={(e) => handleTaskStatusChange(row, e.target.value)}>
                   <option>Todo</option>
                   <option>In Progress</option>
                   <option>Done</option>
@@ -169,7 +268,7 @@ export default function ProjectsPage({ store }) {
               label: "Assignee",
               render: (row) => store.scopedMembers.find((member) => (member.userId || member.id) === row.assigneeId)?.name || "Unassigned",
             },
-            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => store.deleteTask(row.id)}>Delete</button> },
+            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => handleDeleteTask(row)}>Delete</button> },
           ]}
           rows={filteredTasks}
         />

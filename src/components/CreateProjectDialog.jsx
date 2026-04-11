@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { XIcon } from "lucide-react";
 import toast from "react-hot-toast";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
 
 const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
+    const { confirm } = useConfirmDialog();
     const [formData, setFormData] = useState({
         name: "",
         description: "",
@@ -17,6 +19,13 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen, store }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name.trim()) return;
+
+        const accepted = await confirm({
+            title: "Create project?",
+            message: `This will create "${formData.name}" in ${store?.activeWorkspace?.name || "the current workspace"}.`,
+            confirmLabel: "Create project",
+        });
+        if (!accepted) return;
 
         setIsSubmitting(true);
         try {

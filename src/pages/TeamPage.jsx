@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import SectionCard from "../components/SectionCard";
 import SimpleTable from "../components/SimpleTable";
 import { useAuth } from "../context/AuthContext";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import { apiFetch } from "../utils/api";
 
 export default function TeamPage({ store }) {
   const { user } = useAuth();
+  const { confirm } = useConfirmDialog();
   const [form, setForm] = useState({ email: "", role: "Member" });
   const [inviteError, setInviteError] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -43,28 +46,58 @@ export default function TeamPage({ store }) {
     const email = form.email.trim();
     if (!email) return;
 
+    const accepted = await confirm({
+      title: "Send invitation?",
+      message: `Invite ${email} to this workspace as ${form.role}?`,
+      confirmLabel: "Send invite",
+    });
+    if (!accepted) return;
+
     setInviteError("");
     setInviteLoading(true);
     try {
       await store.addMember({ email, role: form.role });
       setForm({ email: "", role: "Member" });
+      toast.success("Invitation sent");
     } catch (error) {
       setInviteError(error.message || "Unable to send invitation.");
+      toast.error(error.message || "Unable to send invitation.");
     } finally {
       setInviteLoading(false);
     }
   };
 
   const handleInvitationResponse = async (invitationId, action) => {
+    const accepted = await confirm({
+      title: action === "accept" ? "Accept invitation?" : "Reject invitation?",
+      message: action === "accept"
+        ? "You will join this workspace."
+        : "This invitation will be declined.",
+      confirmLabel: action === "accept" ? "Accept" : "Reject",
+      tone: action === "accept" ? "primary" : "danger",
+    });
+    if (!accepted) return;
+
     setActionLoadingId(invitationId);
     try {
       await store.respondToInvitation(invitationId, action);
+      toast.success(action === "accept" ? "Invitation accepted" : "Invitation rejected");
     } finally {
       setActionLoadingId("");
     }
   };
 
   const handleJoinRequest = async (requestId, status) => {
+    const accepted = await confirm({
+      title: status === "Approved" ? "Approve request?" : "Reject request?",
+      message: status === "Approved"
+        ? "This user will be added to the workspace."
+        : "This access request will be rejected.",
+      confirmLabel: status === "Approved" ? "Approve" : "Reject",
+      tone: status === "Approved" ? "primary" : "danger",
+    });
+    if (!accepted) return;
+
     setActionLoadingId(requestId);
     try {
       await apiFetch(`/workspaces/${wsId}/join-requests/${requestId}`, {
@@ -72,28 +105,59 @@ export default function TeamPage({ store }) {
         body: JSON.stringify({ status }),
       });
       setJoinRequests((prev) => prev.filter((request) => request.id !== requestId));
+      toast.success(status === "Approved" ? "Join request approved" : "Join request rejected");
       if (status === "Approved") {
         window.location.reload();
       }
     } catch (error) {
       setInviteError(error.message || "Unable to update join request.");
+      toast.error(error.message || "Unable to update join request.");
     } finally {
       setActionLoadingId("");
     }
   };
 
   const handleRemoveMember = async (member) => {
-    const confirmed = window.confirm(`Remove ${member.name} from this workspace?`);
-    if (!confirmed) return;
+    const accepted = await confirm({
+      title: "Remove member?",
+      message: `Remove ${member.name} from this workspace?`,
+      confirmLabel: "Remove member",
+      tone: "danger",
+    });
+    if (!accepted) return;
 
     const identifier = member.userId || member.id;
     setActionLoadingId(identifier);
     try {
       await store.removeMember(identifier);
+      toast.success("Member removed");
     } catch (error) {
       setInviteError(error.message || "Unable to remove member.");
+      toast.error(error.message || "Unable to remove member.");
     } finally {
       setActionLoadingId("");
+    }
+  };
+
+  const handleRoleChange = async (row, role) => {
+    if (row.role === role) return;
+    const accepted = await confirm({
+      title: "Change member role?",
+      message: `Change ${row.name} from ${row.role} to ${role}?`,
+      confirmLabel: "Update role",
+    });
+    if (!accepted) return;
+
+    try {
+      if (row.userId) {
+        await store.updateMemberRole(row.userId, role);
+      } else {
+        await store.updateMember(row.id, { role });
+      }
+      toast.success("Member role updated");
+    } catch (error) {
+      setInviteError(error.message || "Unable to update member role.");
+      toast.error(error.message || "Unable to update member role.");
     }
   };
 
@@ -205,11 +269,7 @@ export default function TeamPage({ store }) {
                   value={row.role}
                   disabled={!canManage || row.role === "Owner" || row.userId === user?.id}
                   onChange={(e) => {
-                    if (row.userId) {
-                      store.updateMemberRole(row.userId, e.target.value);
-                    } else {
-                      store.updateMember(row.id, { role: e.target.value });
-                    }
+                    handleRoleChange(row, e.target.value);
                   }}
                 >
                   <option>Owner</option>

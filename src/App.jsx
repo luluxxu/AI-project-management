@@ -84,20 +84,20 @@ function AuthenticatedApp() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-[292px_1fr] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.92)_35%,_rgba(226,232,240,0.9)_100%)] max-md:grid-cols-1">
-      <aside className="m-4 flex flex-col gap-5 rounded-[28px] border border-white/10 bg-slate-950/95 p-6 text-slate-50 shadow-[0_24px_60px_rgba(15,23,42,0.34)] max-md:m-0 max-md:rounded-none max-md:border-0">
+    <div className="grid min-h-screen grid-cols-[292px_1fr] bg-[radial-gradient(circle_at_top_left,_rgba(255,251,236,0.98),_rgba(244,237,205,0.92)_38%,_rgba(223,214,176,0.78)_100%)] max-md:grid-cols-1">
+      <aside className="sticky top-4 m-4 flex h-[calc(100vh-2rem)] flex-col gap-5 overflow-hidden rounded-[28px] border border-white/10 bg-[#1B0C0C]/96 p-6 text-slate-50 shadow-[0_24px_60px_rgba(27,12,12,0.34)] max-md:static max-md:m-0 max-md:h-auto max-md:rounded-none max-md:border-0">
         <div>
           <div className="text-2xl font-extrabold tracking-tight">TaskPilot AI</div>
-          <p className="mt-1 text-sm text-slate-400">Project management platform</p>
+          <p className="mt-1 text-sm text-[#d8cfbb]">Project management platform</p>
         </div>
 
-        <div className="grid gap-3 rounded-3xl border border-slate-800 bg-white/98 p-4 text-gray-900 shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
-          <label className="text-sm font-semibold text-slate-600">Workspace</label>
+        <div className="grid gap-3 rounded-3xl border border-[#4C5C2D]/20 bg-[#fff9ea] p-4 text-[#1B0C0C] shadow-[0_18px_40px_rgba(27,12,12,0.14)]">
+          <label className="text-sm font-semibold text-[#4C5C2D]">Workspace</label>
           {store.data.workspaces.length > 0 ? (
             <select
               value={store.activeWorkspaceId}
               onChange={(e) => store.setActiveWorkspace(e.target.value)}
-              className="border-slate-200 bg-slate-50/80"
+              className="border-[#e6d79e] bg-[#fffdf4]"
             >
               {store.data.workspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
@@ -108,7 +108,7 @@ function AuthenticatedApp() {
           ) : (
             <p className="text-slate-500 text-sm">No workspaces yet</p>
           )}
-          <button className="bg-slate-900 text-white hover:bg-slate-800 transition" onClick={store.createWorkspace}>
+          <button className="bg-[#4C5C2D] text-[#fff8dd] hover:bg-[#313E17] transition" onClick={store.createWorkspace}>
             + New Workspace
           </button>
         </div>
@@ -120,7 +120,7 @@ function AuthenticatedApp() {
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `px-4 py-3 rounded-2xl text-slate-300 hover:bg-white/8 hover:text-white transition duration-200 ${isActive ? " bg-white text-slate-950 shadow-sm" : ""}`
+                `px-4 py-3 rounded-2xl text-[#d8cfbb] hover:bg-white/8 hover:text-[#FFDE42] transition duration-200 ${isActive ? " bg-[#FFDE42] text-white shadow-sm" : ""}`
               }
             >
               {label}
@@ -128,7 +128,7 @@ function AuthenticatedApp() {
           ))}
           {isAdmin && (
             <>
-              <div className="mt-4 mb-1 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <div className="mt-4 mb-1 px-4 text-xs font-semibold uppercase tracking-wider text-[#96896f]">
                 Admin
               </div>
               {adminLinks.map(([to, label]) => (
@@ -136,7 +136,7 @@ function AuthenticatedApp() {
                   key={to}
                   to={to}
                   className={({ isActive }) =>
-                    `px-4 py-3 rounded-2xl text-slate-300 hover:bg-white/8 hover:text-white transition duration-200 ${isActive ? " bg-white text-slate-950 shadow-sm" : ""}`
+                    `px-4 py-3 rounded-2xl text-[#d8cfbb] hover:bg-white/8 hover:text-[#FFDE42] transition duration-200 ${isActive ? " bg-[#FFDE42] text-white shadow-sm" : ""}`
                   }
                 >
                   {label}
@@ -148,13 +148,13 @@ function AuthenticatedApp() {
 
         {/* User info + logout at bottom */}
         <div style={{ marginTop: "auto", paddingTop: "1rem", borderTop: "1px solid rgba(148, 163, 184, 0.2)" }}>
-          <p className="text-slate-300" style={{ fontSize: "0.84rem", marginBottom: "0.25rem" }}>
+          <p className="text-[#f5ecd1]" style={{ fontSize: "0.84rem", marginBottom: "0.25rem" }}>
             {user?.name || user?.email}
           </p>
-          <p className="text-slate-500" style={{ fontSize: "0.74rem", marginBottom: "0.75rem" }}>
+          <p className="text-[#b9a98e]" style={{ fontSize: "0.74rem", marginBottom: "0.75rem" }}>
             {user?.role || "Member"}
           </p>
-          <button className="w-full bg-white/8 border border-white/10 hover:bg-white/12 transition text-white" onClick={logout}>
+          <button className="w-full border border-[#4C5C2D]/50 bg-[#313E17] text-[#fff8dd] hover:bg-[#4C5C2D] transition" onClick={logout}>
             Log out
           </button>
         </div>
@@ -162,10 +162,10 @@ function AuthenticatedApp() {
 
       <main className="grid gap-5 overflow-auto p-6 max-md:p-4">
         {store.data.workspaces.length > 0 && (
-          <header className="flex items-center justify-between gap-4 rounded-[28px] border border-white/50 bg-white/78 px-6 py-5 shadow-[0_18px_40px_rgba(148,163,184,0.14)] backdrop-blur-md max-md:flex-col max-md:items-start">
+          <header className="flex items-center justify-between gap-4 rounded-[28px] border border-white/50 bg-[#fff9ea]/84 px-6 py-5 shadow-[0_18px_40px_rgba(76,92,45,0.12)] backdrop-blur-md max-md:flex-col max-md:items-start">
             <div className="min-w-0">
-              <h1 className="m-0 text-[2rem] font-semibold tracking-tight text-slate-900">{store.activeWorkspace?.name || "Workspace"}</h1>
-              <p className="mt-1 text-slate-500">
+              <h1 className="m-0 text-[2rem] font-semibold tracking-tight text-[#1B0C0C]">{store.activeWorkspace?.name || "Workspace"}</h1>
+              <p className="mt-1 text-[#5c543e]">
                 Keep projects, tasks, deadlines, and team updates in one place.
               </p>
             </div>

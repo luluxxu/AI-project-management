@@ -21,6 +21,8 @@ router.get("/", requireAuth, route((req, res) => {
     WHERE n.user_id = ?
       AND date(n.trigger_date) <= date('now')
       AND t.status != 'Done'
+      AND t.archived_at IS NULL
+      AND w.archived_at IS NULL
       AND n.id = (
         SELECT n2.id
         FROM notifications n2

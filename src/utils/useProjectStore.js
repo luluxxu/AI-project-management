@@ -64,8 +64,8 @@ export function useProjectStore() {
     if (!activeWorkspaceId) return;
 
     Promise.all([
-      apiFetch(`/projects/${activeWorkspaceId}/projects`),
-      apiFetch(`/tasks/${activeWorkspaceId}/tasks`),
+      apiFetch(`/projects/${activeWorkspaceId}/projects?includeArchived=true`),
+      apiFetch(`/tasks/${activeWorkspaceId}/tasks?includeArchived=true`),
       apiFetch(`/workspaces/${activeWorkspaceId}/members`),
       apiFetch(`/activities/${activeWorkspaceId}/activities`),
     ])
@@ -104,8 +104,10 @@ export function useProjectStore() {
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspaceId) || workspaces[0];
   const resolvedId = activeWorkspace?.id || "";
 
-  const scopedProjects = projects.filter((project) => project.workspaceId === resolvedId);
-  const scopedTasks = tasks.filter((task) => task.workspaceId === resolvedId);
+  const scopedProjects = projects.filter((project) => project.workspaceId === resolvedId && !project.archivedAt);
+  const scopedArchivedProjects = projects.filter((project) => project.workspaceId === resolvedId && !!project.archivedAt);
+  const scopedTasks = tasks.filter((task) => task.workspaceId === resolvedId && !task.archivedAt);
+  const scopedArchivedTasks = tasks.filter((task) => task.workspaceId === resolvedId && !!task.archivedAt);
   const scopedMembers = members.filter((member) => member.workspaceId === resolvedId);
   const scopedActivities = [...activities]
     .filter((activity) => activity.workspaceId === resolvedId)
@@ -201,6 +203,22 @@ export function useProjectStore() {
     logLocalActivity("Project deleted.");
   };
 
+  const archiveProject = async (projectId) => {
+    const archivedAt = new Date().toISOString();
+    await apiFetch(`/projects/${projectId}/archive`, { method: "POST" });
+    setProjects((prev) => prev.map((project) => (project.id === projectId ? { ...project, archivedAt } : project)));
+    setTasks((prev) => prev.map((task) => (task.projectId === projectId ? { ...task, archivedAt } : task)));
+    logLocalActivity("Project archived.");
+  };
+
+  const restoreProject = async (projectId) => {
+    await apiFetch(`/projects/${projectId}/restore`, { method: "POST" });
+    setProjects((prev) => prev.map((project) => (project.id === projectId ? { ...project, archivedAt: null } : project)));
+    setTasks((prev) => prev.map((task) => (task.projectId === projectId ? { ...task, archivedAt: null } : task)));
+    await loadNotifications().catch(() => {});
+    logLocalActivity("Project restored.");
+  };
+
   const addTask = async (task) => {
     const workspaceId = requireWorkspace();
     const created = norm(
@@ -231,6 +249,21 @@ export function useProjectStore() {
     setTasks((prev) => prev.filter((task) => task.id !== taskId));
     await loadNotifications().catch(() => {});
     logLocalActivity("Task deleted.");
+  };
+
+  const archiveTask = async (taskId) => {
+    const archivedAt = new Date().toISOString();
+    await apiFetch(`/tasks/${taskId}/archive`, { method: "POST" });
+    setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, archivedAt } : task)));
+    await loadNotifications().catch(() => {});
+    logLocalActivity("Task archived.");
+  };
+
+  const restoreTask = async (taskId) => {
+    await apiFetch(`/tasks/${taskId}/restore`, { method: "POST" });
+    setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, archivedAt: null } : task)));
+    await loadNotifications().catch(() => {});
+    logLocalActivity("Task restored.");
   };
 
   const addMember = async (member) => {
@@ -372,7 +405,9 @@ export function useProjectStore() {
     activeWorkspace,
     activeWorkspaceId: resolvedId,
     scopedProjects,
+    scopedArchivedProjects,
     scopedTasks,
+    scopedArchivedTasks,
     scopedMembers,
     scopedActivities,
     scopedInvitations,
@@ -389,9 +424,13 @@ export function useProjectStore() {
     addProject,
     updateProject,
     deleteProject,
+    archiveProject,
+    restoreProject,
     addTask,
     updateTask,
     deleteTask,
+    archiveTask,
+    restoreTask,
     addMember,
     inviteMember,
     updateMember,

@@ -14,6 +14,7 @@ import {
   validateWorkspacePayload,
 } from "../middleware/validation.js";
 import { logActivity, uid } from "../utils/workspace.js";
+import { syncTaskNotifications } from "../utils/notifications.js";
 
 const router = Router();
 
@@ -96,6 +97,23 @@ const createInvitationTx = db.transaction((workspaceId, invitation, userName) =>
   logActivity(workspaceId, `Invitation sent to '${userName}'.`);
 });
 
+const setWorkspaceArchivedStateTx = db.transaction((workspace, archivedAt) => {
+  db.prepare("UPDATE workspaces SET archived_at = ? WHERE id = ?").run(archivedAt, workspace.id);
+  db.prepare("UPDATE projects SET archived_at = ? WHERE workspace_id = ?").run(archivedAt, workspace.id);
+  db.prepare("UPDATE tasks SET archived_at = ? WHERE workspace_id = ?").run(archivedAt, workspace.id);
+
+  if (archivedAt) {
+    db.prepare("DELETE FROM notifications WHERE workspace_id = ?").run(workspace.id);
+    logActivity(workspace.id, `Workspace '${workspace.name}' archived.`);
+  } else {
+    const tasks = db.prepare("SELECT id FROM tasks WHERE workspace_id = ?").all(workspace.id);
+    for (const task of tasks) {
+      syncTaskNotifications(task.id);
+    }
+    logActivity(workspace.id, `Workspace '${workspace.name}' restored.`);
+  }
+});
+
 const respondToJoinRequestTx = db.transaction((workspaceId, request, status) => {
   db.prepare("UPDATE workspace_join_requests SET status = ? WHERE id = ?").run(status, request.id);
 
@@ -132,12 +150,14 @@ router.get("/discover", requireAuth, route((req, res) => {
     WHERE w.id NOT IN (
       SELECT workspace_id FROM workspace_members WHERE user_id = ?
     )
+      AND w.archived_at IS NULL
     ORDER BY w.created_at DESC
   `).all(req.userId);
   res.json(workspaces);
 }));
 
 router.get("/", requireAuth, route((req, res) => {
+  const includeArchived = req.query.includeArchived === "true";
   const workspaces = req.userRole === "Admin"
     ? db.prepare(`
         SELECT
@@ -146,8 +166,9 @@ router.get("/", requireAuth, route((req, res) => {
           COALESCE(wm.role, 'Admin') AS current_role
         FROM workspaces w
         LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = ?
+        WHERE (? = 1 OR w.archived_at IS NULL)
         ORDER BY w.created_at
-      `).all(req.userId)
+      `).all(req.userId, includeArchived ? 1 : 0)
     : db.prepare(`
         SELECT DISTINCT
           w.*,
@@ -155,8 +176,9 @@ router.get("/", requireAuth, route((req, res) => {
           wm.role AS current_role
         FROM workspaces w
         JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = ?
+        WHERE (? = 1 OR w.archived_at IS NULL)
         ORDER BY w.created_at
-      `).all(req.userId);
+      `).all(req.userId, includeArchived ? 1 : 0);
   res.json(workspaces);
 }));
 
@@ -177,6 +199,35 @@ router.delete("/:id", requireAuth, route((req, res) => {
   }
 
   db.prepare("DELETE FROM workspaces WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+}));
+
+router.post("/:id/archive", requireAuth, route((req, res) => {
+  const workspace = db.prepare("SELECT id, owner_id, name, archived_at FROM workspaces WHERE id = ?").get(req.params.id);
+  if (!workspace) return res.status(404).json({ error: "Workspace not found" });
+
+  const membership = getWorkspaceMembership(req.params.id, req.userId);
+  if (req.userRole !== "Admin" && (!membership || membership.role !== "Owner")) {
+    return res.status(403).json({ error: "Only workspace Owner or platform Admin can archive" });
+  }
+  if (workspace.archived_at) return res.status(400).json({ error: "Workspace is already archived" });
+
+  const archivedAt = new Date().toISOString();
+  setWorkspaceArchivedStateTx(workspace, archivedAt);
+  res.json({ ok: true, archivedAt });
+}));
+
+router.post("/:id/restore", requireAuth, route((req, res) => {
+  const workspace = db.prepare("SELECT id, owner_id, name, archived_at FROM workspaces WHERE id = ?").get(req.params.id);
+  if (!workspace) return res.status(404).json({ error: "Workspace not found" });
+
+  const membership = getWorkspaceMembership(req.params.id, req.userId);
+  if (req.userRole !== "Admin" && (!membership || membership.role !== "Owner")) {
+    return res.status(403).json({ error: "Only workspace Owner or platform Admin can restore" });
+  }
+  if (!workspace.archived_at) return res.status(400).json({ error: "Workspace is not archived" });
+
+  setWorkspaceArchivedStateTx(workspace, null);
   res.json({ ok: true });
 }));
 

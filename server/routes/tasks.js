@@ -3,6 +3,7 @@ import db from "../db.js";
 import { requireAuth, requireWorkspaceAccess, canAccessWorkspace } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
 import { logActivity, uid } from "../utils/workspace.js";
+import { deleteTaskNotifications, syncTaskNotifications } from "../utils/notifications.js";
 
 const router = Router();
 
@@ -30,6 +31,8 @@ router.post("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res
   db.prepare(
     "INSERT INTO tasks (id, workspace_id, project_id, title, description, status, priority, assignee_id, due_date, effort, planned_start, planned_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(id, req.params.wsId, projectId, title, description, status, priority, assigneeId, dueDate, effort, plannedStart, plannedEnd);
+
+  syncTaskNotifications(id);
 
   logActivity(req.params.wsId, `Task '${title}' created.`);
   res.status(201).json({
@@ -79,6 +82,7 @@ router.patch("/:id", requireAuth, route((req, res) => {
 
   values.push(req.params.id);
   db.prepare(`UPDATE tasks SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+  syncTaskNotifications(req.params.id);
   logActivity(task.workspace_id, "Task updated.");
   res.json(db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id));
 }));
@@ -91,6 +95,7 @@ router.delete("/:id", requireAuth, route((req, res) => {
   }
 
   db.prepare("DELETE FROM tasks WHERE id = ?").run(req.params.id);
+  deleteTaskNotifications(req.params.id);
   logActivity(task.workspace_id, "Task deleted.");
   res.json({ ok: true });
 }));

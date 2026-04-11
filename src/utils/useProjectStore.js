@@ -22,6 +22,7 @@ export function useProjectStore() {
   const [activities, setActivities] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [teamInvitations, setTeamInvitations] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState(
@@ -48,6 +49,15 @@ export function useProjectStore() {
     apiFetch("/invitations")
       .then((list) => setInvitations(list.map(norm)))
       .catch(() => setInvitations([]));
+  }, []);
+
+  const loadNotifications = async () => {
+    const list = await apiFetch("/notifications");
+    setNotifications(list.map(norm));
+  };
+
+  useEffect(() => {
+    loadNotifications().catch(() => setNotifications([]));
   }, []);
 
   useEffect(() => {
@@ -85,9 +95,10 @@ export function useProjectStore() {
       activities,
       invitations,
       teamInvitations,
+      notifications,
       activeWorkspaceId,
     }),
-    [workspaces, projects, tasks, members, activities, invitations, teamInvitations, activeWorkspaceId]
+    [workspaces, projects, tasks, members, activities, invitations, teamInvitations, notifications, activeWorkspaceId]
   );
 
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspaceId) || workspaces[0];
@@ -102,6 +113,13 @@ export function useProjectStore() {
   const scopedInvitations = [...teamInvitations]
     .filter((invite) => invite.workspaceId === resolvedId)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const scopedNotifications = [...notifications]
+    .filter((notification) => notification.workspaceId === resolvedId)
+    .sort((a, b) => {
+      if (!!a.readAt !== !!b.readAt) return a.readAt ? 1 : -1;
+      return new Date(b.triggerDate || b.createdAt) - new Date(a.triggerDate || a.createdAt);
+    });
+  const unreadNotifications = notifications.filter((notification) => !notification.readAt);
 
   const analytics = useMemo(
     () => getWorkspaceSnapshot(data, resolvedId),
@@ -192,6 +210,7 @@ export function useProjectStore() {
       })
     );
     setTasks((prev) => [...prev, created]);
+    await loadNotifications().catch(() => {});
     logLocalActivity(`Task '${task.title}' created.`);
   };
 
@@ -203,12 +222,14 @@ export function useProjectStore() {
       })
     );
     setTasks((prev) => prev.map((task) => (task.id === taskId ? updated : task)));
+    await loadNotifications().catch(() => {});
     logLocalActivity("Task updated.");
   };
 
   const deleteTask = async (taskId) => {
     await apiFetch(`/tasks/${taskId}`, { method: "DELETE" });
     setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    await loadNotifications().catch(() => {});
     logLocalActivity("Task deleted.");
   };
 
@@ -326,10 +347,25 @@ export function useProjectStore() {
       )
     );
     setTasks((prev) => [...prev, ...createdTasks]);
+    await loadNotifications().catch(() => {});
     logLocalActivity(`${createdTasks.length} AI-generated task draft(s) imported.`);
   };
 
   const resetDemoData = () => window.location.reload();
+
+  const markNotificationRead = async (notificationId) => {
+    const updated = norm(
+      await apiFetch(`/notifications/${notificationId}/read`, {
+        method: "PATCH",
+      })
+    );
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === notificationId ? { ...notification, readAt: updated.readAt } : notification
+      )
+    );
+    return updated;
+  };
 
   return {
     data,
@@ -340,8 +376,11 @@ export function useProjectStore() {
     scopedMembers,
     scopedActivities,
     scopedInvitations,
+    scopedNotifications,
     invitations,
     teamInvitations,
+    notifications,
+    unreadNotifications,
     analytics,
     loading,
     error,
@@ -361,5 +400,7 @@ export function useProjectStore() {
     respondToInvitation,
     importDraftTasks,
     resetDemoData,
+    loadNotifications,
+    markNotificationRead,
   };
 }

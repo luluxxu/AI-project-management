@@ -71,6 +71,19 @@ db.exec(`
     created_at   TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS invitations (
+    id              TEXT PRIMARY KEY,
+    workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    invited_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    invited_email   TEXT NOT NULL,
+    invited_name    TEXT NOT NULL,
+    role            TEXT NOT NULL DEFAULT 'Member' CHECK (role IN ('Owner', 'Admin', 'Member')),
+    status          TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Accepted', 'Rejected')),
+    invited_by_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at      TEXT NOT NULL,
+    responded_at    TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS workspace_members (
     id           TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -98,6 +111,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_members_user_id ON members(user_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_members_workspace_user_unique ON members(workspace_id, user_id);
   CREATE INDEX IF NOT EXISTS idx_activities_workspace_id_created_at ON activities(workspace_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_invitations_workspace_id ON invitations(workspace_id);
+  CREATE INDEX IF NOT EXISTS idx_invitations_invited_user_id_status ON invitations(invited_user_id, status);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_invitations_workspace_user_pending_unique
+    ON invitations(workspace_id, invited_user_id, status);
 `);
 
 // Validation triggers from teammate's work

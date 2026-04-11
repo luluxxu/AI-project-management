@@ -5,15 +5,13 @@ import { randomUUID } from "crypto";
 import db, { ADMIN_EMAIL } from "../db.js";
 import { requireAuth, JWT_SECRET } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
+import { validateLoginPayload, validateRegistrationPayload } from "../middleware/validation.js";
 
 const router = Router();
 const uid = () => randomUUID().slice(0, 8);
 
 router.post("/register", route((req, res) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: "name, email and password are required" });
-  }
+  const { name, email, password } = validateRegistrationPayload(req.body);
 
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
   if (existing) {
@@ -34,10 +32,7 @@ router.post("/register", route((req, res) => {
 }));
 
 router.post("/login", route((req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: "email and password are required" });
-  }
+  const { email, password } = validateLoginPayload(req.body);
 
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {

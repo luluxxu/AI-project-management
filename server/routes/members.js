@@ -2,6 +2,7 @@ import { Router } from "express";
 import db from "../db.js";
 import { requireAuth, canAccessWorkspace, getWorkspaceMembership } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
+import { validateLegacyMemberUpdatePayload } from "../middleware/validation.js";
 import { logActivity } from "../utils/workspace.js";
 
 const router = Router();
@@ -100,12 +101,13 @@ router.patch("/:id", requireAuth, route((req, res) => {
   const workspaceId = member?.workspace_id || workspaceMember?.workspace_id;
   if (!workspaceId) return res.status(404).json({ error: "Not found" });
 
+  const payload = validateLegacyMemberUpdatePayload(req.body, { partial: true });
   const actorMembership = getWorkspaceMembership(workspaceId, req.userId);
   if (req.userRole !== "Admin" && (!actorMembership || actorMembership.role === "Member")) {
     return res.status(403).json({ error: "Workspace admin access required" });
   }
 
-  updateMemberTx(member, workspaceMember, workspaceId, req.params.id, req.body);
+  updateMemberTx(member, workspaceMember, workspaceId, req.params.id, payload);
   const updated =
     db.prepare("SELECT * FROM members WHERE id = ?").get(req.params.id) ||
     db.prepare(`

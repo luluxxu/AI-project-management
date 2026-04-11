@@ -1,6 +1,7 @@
 import { Router } from "express";
 import db from "../db.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
+import { validateUserRolePayload } from "../middleware/validation.js";
 
 const router = Router();
 
@@ -14,10 +15,7 @@ router.get("/", requireAuth, requireAdmin, (req, res) => {
 
 // PATCH /api/v1/users/:id — update user role (admin only)
 router.patch("/:id", requireAuth, requireAdmin, (req, res) => {
-  const { role } = req.body;
-  if (!role || !["Admin", "Member"].includes(role)) {
-    return res.status(400).json({ error: "role must be Admin or Member" });
-  }
+  const { role } = validateUserRolePayload(req.body);
 
   const user = db.prepare("SELECT id FROM users WHERE id = ?").get(req.params.id);
   if (!user) return res.status(404).json({ error: "User not found" });

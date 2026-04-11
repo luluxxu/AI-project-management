@@ -7,6 +7,12 @@ import {
   getWorkspaceMembership,
 } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
+import {
+  validateInvitationPayload,
+  validateJoinRequestPayload,
+  validateMemberRolePayload,
+  validateWorkspacePayload,
+} from "../middleware/validation.js";
 import { logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
@@ -194,8 +200,7 @@ router.get("/", requireAuth, route((req, res) => {
 }));
 
 router.post("/", requireAuth, route((req, res) => {
-  const { name, description = "" } = req.body;
-  if (!name) return res.status(400).json({ error: "name is required" });
+  const { name, description = "" } = validateWorkspacePayload(req.body);
 
   const workspace = createWorkspaceTx(name, description, req.userId);
   res.status(201).json(workspace);
@@ -219,12 +224,7 @@ router.get("/:wsId/members", requireAuth, requireWorkspaceAccess, route((req, re
 }));
 
 router.post("/:wsId/members", requireAuth, requireWorkspaceAdmin, route((req, res) => {
-  const { email = "", role = "Member" } = req.body;
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail) return res.status(400).json({ error: "email is required" });
-  if (!["Owner", "Admin", "Member"].includes(role)) {
-    return res.status(400).json({ error: "role must be Owner, Admin, or Member" });
-  }
+  const { email: normalizedEmail, role = "Member" } = validateInvitationPayload(req.body);
 
   const user = db.prepare("SELECT id, name, email FROM users WHERE lower(email) = ?").get(normalizedEmail);
   if (!user) {
@@ -241,10 +241,7 @@ router.post("/:wsId/members", requireAuth, requireWorkspaceAdmin, route((req, re
 }));
 
 router.patch("/:wsId/members/:userId", requireAuth, requireWorkspaceAdmin, route((req, res) => {
-  const { role } = req.body;
-  if (!role || !["Owner", "Admin", "Member"].includes(role)) {
-    return res.status(400).json({ error: "role must be Owner, Admin, or Member" });
-  }
+  const { role } = validateMemberRolePayload(req.body);
 
   const membership = getWorkspaceMembership(req.params.wsId, req.params.userId);
   if (!membership) return res.status(404).json({ error: "User is not a member" });
@@ -279,12 +276,7 @@ router.get("/:wsId/invitations", requireAuth, requireWorkspaceAdmin, route((req,
 }));
 
 router.post("/:wsId/invitations", requireAuth, requireWorkspaceAdmin, route((req, res) => {
-  const { email = "", role = "Member" } = req.body;
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail) return res.status(400).json({ error: "email is required" });
-  if (!["Owner", "Admin", "Member"].includes(role)) {
-    return res.status(400).json({ error: "role must be Owner, Admin, or Member" });
-  }
+  const { email: normalizedEmail, role = "Member" } = validateInvitationPayload(req.body);
 
   const user = db.prepare("SELECT id, name, email FROM users WHERE lower(email) = ?").get(normalizedEmail);
   if (!user) {
@@ -360,10 +352,7 @@ router.get("/:wsId/join-requests", requireAuth, requireWorkspaceAdmin, route((re
 }));
 
 router.patch("/:wsId/join-requests/:requestId", requireAuth, requireWorkspaceAdmin, route((req, res) => {
-  const { status } = req.body;
-  if (!["Approved", "Rejected"].includes(status)) {
-    return res.status(400).json({ error: "status must be Approved or Rejected" });
-  }
+  const { status } = validateJoinRequestPayload(req.body);
 
   const request = db.prepare(
     "SELECT * FROM workspace_join_requests WHERE id = ? AND workspace_id = ?"

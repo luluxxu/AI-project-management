@@ -50,8 +50,25 @@ const deleteTaskTx = db.transaction((taskId, workspaceId) => {
   logActivity(workspaceId, "Task deleted.");
 });
 
+const setTaskArchivedStateTx = db.transaction((taskId, workspaceId, archivedAt, title) => {
+  db.prepare("UPDATE tasks SET archived_at = ? WHERE id = ?").run(archivedAt, taskId);
+  if (archivedAt) {
+    deleteTaskNotifications(taskId);
+    logActivity(workspaceId, `Task '${title}' archived.`);
+  } else {
+    syncTaskNotifications(taskId);
+    logActivity(workspaceId, `Task '${title}' restored.`);
+  }
+});
+
 router.get("/:wsId/tasks", requireAuth, requireWorkspaceAccess, route((req, res) => {
-  const tasks = db.prepare("SELECT * FROM tasks WHERE workspace_id = ?").all(req.params.wsId);
+  const includeArchived = req.query.includeArchived === "true";
+  const tasks = db.prepare(`
+    SELECT *
+    FROM tasks
+    WHERE workspace_id = ?
+      AND (? = 1 OR archived_at IS NULL)
+  `).all(req.params.wsId, includeArchived ? 1 : 0);
   res.json(tasks);
 }));
 
@@ -115,6 +132,31 @@ router.patch("/:id", requireAuth, route((req, res) => {
 
   const updated = updateTaskTx(req.params.id, task.workspace_id, updates, values);
   res.json(updated);
+}));
+
+router.post("/:id/archive", requireAuth, route((req, res) => {
+  const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
+  if (!task) return res.status(404).json({ error: "Not found" });
+  if (!canAccessWorkspace(task.workspace_id, req.userId, req.userRole)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  if (task.archived_at) return res.status(400).json({ error: "Task is already archived" });
+
+  const archivedAt = new Date().toISOString();
+  setTaskArchivedStateTx(task.id, task.workspace_id, archivedAt, task.title);
+  res.json({ ok: true, archivedAt });
+}));
+
+router.post("/:id/restore", requireAuth, route((req, res) => {
+  const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
+  if (!task) return res.status(404).json({ error: "Not found" });
+  if (!canAccessWorkspace(task.workspace_id, req.userId, req.userRole)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  if (!task.archived_at) return res.status(400).json({ error: "Task is not archived" });
+
+  setTaskArchivedStateTx(task.id, task.workspace_id, null, task.title);
+  res.json({ ok: true });
 }));
 
 router.delete("/:id", requireAuth, route((req, res) => {

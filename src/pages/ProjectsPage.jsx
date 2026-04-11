@@ -205,25 +205,39 @@ export default function ProjectsPage({ store }) {
 
       <div className="two-col-grid">
         <SectionCard title="Create Project" subtitle={`Add a new project for ${teamName}`}>
-          <div className="form-grid">
-            <input placeholder="Project name" value={projectForm.name} onChange={(e) => setProjectForm((prev) => ({ ...prev, name: e.target.value }))} />
-            <input placeholder="Description" value={projectForm.description} onChange={(e) => setProjectForm((prev) => ({ ...prev, description: e.target.value }))} />
-            <select value={projectForm.status} onChange={(e) => setProjectForm((prev) => ({ ...prev, status: e.target.value }))}>
-              <option>Planning</option>
-              <option>Active</option>
-              <option>Completed</option>
-              <option>On Hold</option>
-              <option>Cancelled</option>
-            </select>
-            <select value={projectForm.priority} onChange={(e) => setProjectForm((prev) => ({ ...prev, priority: e.target.value }))}>
-              <option>High</option>
-              <option>Medium</option>
-              <option>Low</option>
-            </select>
-            <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, startDate: e.target.value }))} />
-            <input type="date" value={projectForm.endDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, endDate: e.target.value }))} />
+          <div className="grid gap-4">
+            <div className="rounded-3xl border border-[#e6d79e] bg-[#fff7d1]/70 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#4C5C2D]">
+                  Project details
+                </span>
+                <span className="text-xs text-[#6c6346]">Keep it focused and time-bound</span>
+              </div>
+              <div className="form-grid">
+                <input placeholder="Project name" value={projectForm.name} onChange={(e) => setProjectForm((prev) => ({ ...prev, name: e.target.value }))} />
+                <input placeholder="Description" value={projectForm.description} onChange={(e) => setProjectForm((prev) => ({ ...prev, description: e.target.value }))} />
+                <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+                  <select value={projectForm.status} onChange={(e) => setProjectForm((prev) => ({ ...prev, status: e.target.value }))}>
+                    <option>Planning</option>
+                    <option>Active</option>
+                    <option>Completed</option>
+                    <option>On Hold</option>
+                    <option>Cancelled</option>
+                  </select>
+                  <select value={projectForm.priority} onChange={(e) => setProjectForm((prev) => ({ ...prev, priority: e.target.value }))}>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+                  <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, startDate: e.target.value }))} />
+                  <input type="date" value={projectForm.endDate} onChange={(e) => setProjectForm((prev) => ({ ...prev, endDate: e.target.value }))} />
+                </div>
+              </div>
+            </div>
             <button
-              className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
+              className="inline-flex items-center justify-center rounded-2xl border border-[#4C5C2D] bg-[#4C5C2D] px-4 py-3 font-semibold text-[#fff8dd] shadow-[0_14px_28px_rgba(76,92,45,0.22)] transition hover:-translate-y-0.5 hover:bg-[#313E17]"
               onClick={handleCreateProject}
             >
               Save Project
@@ -232,35 +246,49 @@ export default function ProjectsPage({ store }) {
         </SectionCard>
 
         <SectionCard title="Create Task" subtitle={`Capture shared tasks for ${teamName}`}>
-          <div className="form-grid">
-            <select value={taskForm.projectId} onChange={(e) => setTaskForm((prev) => ({ ...prev, projectId: e.target.value }))}>
-              <option value="">Choose project</option>
-              {store.scopedProjects.map((project) => (
-                <option key={project.id} value={project.id}>{project.name}</option>
-              ))}
-            </select>
-            <input placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm((prev) => ({ ...prev, title: e.target.value }))} />
-            <input placeholder="Description" value={taskForm.description} onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))} />
-            <select value={taskForm.status} onChange={(e) => setTaskForm((prev) => ({ ...prev, status: e.target.value }))}>
-              <option>Todo</option>
-              <option>In Progress</option>
-              <option>Done</option>
-            </select>
-            <select value={taskForm.priority} onChange={(e) => setTaskForm((prev) => ({ ...prev, priority: e.target.value }))}>
-              <option>High</option>
-              <option>Medium</option>
-              <option>Low</option>
-            </select>
-            <select value={taskForm.assigneeId} onChange={(e) => setTaskForm((prev) => ({ ...prev, assigneeId: e.target.value }))}>
-              <option value="">Unassigned</option>
-              {store.scopedMembers.map((member) => (
-                <option key={member.userId || member.id} value={member.userId || member.id}>{member.name}</option>
-              ))}
-            </select>
-            <input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
-            <input type="number" min="1" max="8" value={taskForm.effort} onChange={(e) => setTaskForm((prev) => ({ ...prev, effort: Number(e.target.value) }))} />
+          <div className="grid gap-4">
+            <div className="rounded-3xl border border-[#e6d79e] bg-[#fff7d1]/70 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#4C5C2D]">
+                  Task details
+                </span>
+                <span className="text-xs text-[#6c6346]">Assign ownership and a due date</span>
+              </div>
+              <div className="form-grid">
+                <select value={taskForm.projectId} onChange={(e) => setTaskForm((prev) => ({ ...prev, projectId: e.target.value }))}>
+                  <option value="">Choose project</option>
+                  {store.scopedProjects.map((project) => (
+                    <option key={project.id} value={project.id}>{project.name}</option>
+                  ))}
+                </select>
+                <input placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm((prev) => ({ ...prev, title: e.target.value }))} />
+                <input placeholder="Description" value={taskForm.description} onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))} />
+                <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+                  <select value={taskForm.status} onChange={(e) => setTaskForm((prev) => ({ ...prev, status: e.target.value }))}>
+                    <option>Todo</option>
+                    <option>In Progress</option>
+                    <option>Done</option>
+                  </select>
+                  <select value={taskForm.priority} onChange={(e) => setTaskForm((prev) => ({ ...prev, priority: e.target.value }))}>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+                  <select value={taskForm.assigneeId} onChange={(e) => setTaskForm((prev) => ({ ...prev, assigneeId: e.target.value }))}>
+                    <option value="">Unassigned</option>
+                    {store.scopedMembers.map((member) => (
+                      <option key={member.userId || member.id} value={member.userId || member.id}>{member.name}</option>
+                    ))}
+                  </select>
+                  <input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
+                </div>
+                <input type="number" min="1" max="8" value={taskForm.effort} onChange={(e) => setTaskForm((prev) => ({ ...prev, effort: Number(e.target.value) }))} />
+              </div>
+            </div>
             <button
-              className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
+              className="inline-flex items-center justify-center rounded-2xl border border-[#4C5C2D] bg-[#4C5C2D] px-4 py-3 font-semibold text-[#fff8dd] shadow-[0_14px_28px_rgba(76,92,45,0.22)] transition hover:-translate-y-0.5 hover:bg-[#313E17]"
               onClick={handleCreateTask}
             >
               Save Task
@@ -274,7 +302,7 @@ export default function ProjectsPage({ store }) {
         subtitle={showArchived ? "Archived projects can be restored here" : "Edit status inline or archive finished work"}
         action={
           <label className="flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+            <input className="accent-[#4C5C2D]" type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
             Show archived
           </label>
         }
@@ -302,11 +330,11 @@ export default function ProjectsPage({ store }) {
               key: "actions",
               label: "Actions",
               render: (row) => showArchived ? (
-                <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50" onClick={() => handleRestoreProject(row)}>Restore</button>
+                <button className="rounded-2xl border border-[#4C5C2D]/20 bg-white px-4 py-2.5 text-[#313E17] transition hover:bg-[#fff7d1]" onClick={() => handleRestoreProject(row)}>Restore</button>
               ) : (
                 <div className="flex gap-2">
-                  <button className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-800 transition hover:bg-amber-100" onClick={() => handleArchiveProject(row)}>Archive</button>
-                  <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => handleDeleteProject(row)}>Delete</button>
+                  <button className="rounded-2xl border border-[#e6d79e] bg-[#fff1a6] px-4 py-2.5 text-[#313E17] transition hover:bg-[#FFDE42]" onClick={() => handleArchiveProject(row)}>Archive</button>
+                  <button className="rounded-2xl border border-[#d8b17b] bg-[#f6dfb4] px-4 py-2.5 text-[#7a3412] transition hover:bg-[#efd296]" onClick={() => handleDeleteProject(row)}>Delete</button>
                 </div>
               ),
             },
@@ -356,7 +384,7 @@ export default function ProjectsPage({ store }) {
                 <div className="flex gap-2">
                   {showArchived ? (
                     <button
-                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50"
+                      className="rounded-2xl border border-[#4C5C2D]/20 bg-white px-4 py-2.5 text-[#313E17] transition hover:bg-[#fff7d1]"
                       onClick={() => handleRestoreTask(row)}
                     >
                       Restore
@@ -364,19 +392,19 @@ export default function ProjectsPage({ store }) {
                   ) : (
                     <>
                       <button
-                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50"
+                        className="rounded-2xl border border-[#4C5C2D]/20 bg-white px-4 py-2.5 text-[#313E17] transition hover:bg-[#fff7d1]"
                         onClick={() => setEditingTask(row)}
                       >
                         Edit
                       </button>
                       <button
-                        className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-amber-800 transition hover:bg-amber-100"
+                        className="rounded-2xl border border-[#e6d79e] bg-[#fff1a6] px-4 py-2.5 text-[#313E17] transition hover:bg-[#FFDE42]"
                         onClick={() => handleArchiveTask(row)}
                       >
                         Archive
                       </button>
                       <button
-                        className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition"
+                        className="rounded-2xl border border-[#d8b17b] bg-[#f6dfb4] px-4 py-2.5 text-[#7a3412] transition hover:bg-[#efd296]"
                         onClick={() => handleDeleteTask(row)}
                       >
                         Delete

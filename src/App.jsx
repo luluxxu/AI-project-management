@@ -1,4 +1,6 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Toaster, toast } from "react-hot-toast";
 import DashboardPage from "./pages/DashboardPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import CalendarPage from "./pages/CalendarPage";
@@ -11,6 +13,7 @@ import DiscoverPage from "./pages/DiscoverPage";
 import LoginPage from "./pages/LoginPage";
 import { useProjectStore } from "./utils/useProjectStore";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import NotificationCenter from "./components/NotificationCenter";
 
 const links = [
   ["/", "Dashboard"],
@@ -65,6 +68,15 @@ function WsGuard({ store, children }) {
 function AuthenticatedApp() {
   const store = useProjectStore();
   const { user, logout, isAdmin } = useAuth();
+
+  useEffect(() => {
+    store.unreadNotifications.slice(0, 3).forEach((notification) => {
+      const storageKey = `taskpilot-notified-${notification.id}`;
+      if (sessionStorage.getItem(storageKey)) return;
+      sessionStorage.setItem(storageKey, "1");
+      toast(notification.message, { duration: 5000 });
+    });
+  }, [store.unreadNotifications]);
 
   if (store.loading) {
     return <div style={{ padding: "2rem", color: "#6b7280" }}>Loading...</div>;
@@ -155,6 +167,11 @@ function AuthenticatedApp() {
                 Keep projects, tasks, deadlines, and team updates in one place.
               </p>
             </div>
+            <NotificationCenter
+              notifications={store.scopedNotifications}
+              unreadCount={store.scopedNotifications.filter((notification) => !notification.readAt).length}
+              onMarkRead={store.markNotificationRead}
+            />
           </header>
         )}
 
@@ -177,6 +194,7 @@ function AuthenticatedApp() {
 export default function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" toastOptions={{ style: { borderRadius: "16px", background: "#0f172a", color: "#f8fafc" } }} />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route

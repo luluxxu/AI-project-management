@@ -6,6 +6,58 @@ import { logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
 
+const respondToInvitationTx = db.transaction((invitation, action, userId) => {
+  const respondedAt = new Date().toISOString();
+  const nextStatus = action === "accept" ? "Accepted" : "Rejected";
+
+  db.prepare("UPDATE invitations SET status = ?, responded_at = ? WHERE id = ?")
+    .run(nextStatus, respondedAt, invitation.id);
+
+  if (action === "accept") {
+    const existingMember = db.prepare(
+      "SELECT id FROM members WHERE workspace_id = ? AND user_id = ?"
+    ).get(invitation.workspace_id, userId);
+    const existingWorkspaceMember = db.prepare(
+      "SELECT id FROM workspace_members WHERE workspace_id = ? AND user_id = ?"
+    ).get(invitation.workspace_id, userId);
+
+    if (!existingMember) {
+      db.prepare(
+        "INSERT INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run(
+        uid("m-"),
+        invitation.workspace_id,
+        userId,
+        invitation.invited_name,
+        invitation.role,
+        invitation.invited_email
+      );
+    }
+
+    if (!existingWorkspaceMember) {
+      db.prepare(
+        "INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)"
+      ).run(
+        uid("wm-"),
+        invitation.workspace_id,
+        userId,
+        invitation.role,
+        respondedAt
+      );
+    }
+
+    logActivity(invitation.workspace_id, `Invitation accepted by '${invitation.invited_name}'.`);
+  } else {
+    logActivity(invitation.workspace_id, `Invitation rejected by '${invitation.invited_name}'.`);
+  }
+
+  return {
+    id: invitation.id,
+    status: nextStatus,
+    respondedAt,
+  };
+});
+
 router.get("/", requireAuth, route((req, res) => {
   const invitations = db.prepare(`
     SELECT i.*, w.name AS workspace_name, inviter.name AS invited_by_name
@@ -33,54 +85,8 @@ router.post("/:id/respond", requireAuth, route((req, res) => {
     return res.status(400).json({ error: "This invitation has already been responded to." });
   }
 
-  const respondedAt = new Date().toISOString();
-  const nextStatus = action === "accept" ? "Accepted" : "Rejected";
-  db.prepare("UPDATE invitations SET status = ?, responded_at = ? WHERE id = ?")
-    .run(nextStatus, respondedAt, invitation.id);
-
-  if (action === "accept") {
-    const existingMember = db.prepare(
-      "SELECT id FROM members WHERE workspace_id = ? AND user_id = ?"
-    ).get(invitation.workspace_id, req.userId);
-    const existingWorkspaceMember = db.prepare(
-      "SELECT id FROM workspace_members WHERE workspace_id = ? AND user_id = ?"
-    ).get(invitation.workspace_id, req.userId);
-
-    if (!existingMember) {
-      db.prepare(
-        "INSERT INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run(
-        uid("m-"),
-        invitation.workspace_id,
-        req.userId,
-        invitation.invited_name,
-        invitation.role,
-        invitation.invited_email
-      );
-    }
-
-    if (!existingWorkspaceMember) {
-      db.prepare(
-        "INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)"
-      ).run(
-        uid("wm-"),
-        invitation.workspace_id,
-        req.userId,
-        invitation.role,
-        respondedAt
-      );
-    }
-
-    logActivity(invitation.workspace_id, `Invitation accepted by '${invitation.invited_name}'.`);
-  } else {
-    logActivity(invitation.workspace_id, `Invitation rejected by '${invitation.invited_name}'.`);
-  }
-
-  res.json({
-    id: invitation.id,
-    status: nextStatus,
-    respondedAt,
-  });
+  const response = respondToInvitationTx(invitation, action, req.userId);
+  res.json(response);
 }));
 
 export default router;

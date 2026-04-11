@@ -11,6 +11,107 @@ import { logActivity, uid } from "../utils/workspace.js";
 
 const router = Router();
 
+const createWorkspaceTx = db.transaction((name, description, userId) => {
+  const id = uid("ws-");
+  const now = new Date().toISOString();
+
+  db.prepare("INSERT INTO workspaces (id, name, description, created_at, owner_id) VALUES (?, ?, ?, ?, ?)")
+    .run(id, name, description, now, userId);
+
+  const owner = db.prepare("SELECT name, email FROM users WHERE id = ?").get(userId);
+  db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Owner', ?)")
+    .run(uid("wm-"), id, userId, now);
+  db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(uid("m-"), id, userId, owner?.name || "Owner", "Owner", owner?.email || "");
+
+  logActivity(id, `Workspace '${name}' created.`);
+
+  return {
+    id,
+    name,
+    description,
+    createdAt: now,
+    ownerId: userId,
+    my_role: "Owner",
+    current_role: "Owner",
+  };
+});
+
+const addWorkspaceMemberTx = db.transaction((workspaceId, user, role) => {
+  const now = new Date().toISOString();
+  const memberId = uid("wm-");
+
+  db.prepare("INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)")
+    .run(memberId, workspaceId, user.id, role, now);
+  db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(uid("m-"), workspaceId, user.id, user.name, role, user.email);
+
+  logActivity(workspaceId, `${user.name} was added as ${role}.`);
+
+  return {
+    id: memberId,
+    workspaceId,
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    role,
+    joinedAt: now,
+  };
+});
+
+const updateWorkspaceMemberRoleTx = db.transaction((workspaceId, userId, role) => {
+  db.prepare("UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?")
+    .run(role, workspaceId, userId);
+  db.prepare("UPDATE members SET role = ? WHERE workspace_id = ? AND user_id = ?")
+    .run(role, workspaceId, userId);
+
+  logActivity(workspaceId, "Member role updated.");
+  return listWorkspaceMembers(workspaceId).find((member) => member.user_id === userId);
+});
+
+const removeWorkspaceMemberTx = db.transaction((workspaceId, userId) => {
+  db.prepare("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?")
+    .run(workspaceId, userId);
+  db.prepare("DELETE FROM members WHERE workspace_id = ? AND user_id = ?")
+    .run(workspaceId, userId);
+
+  logActivity(workspaceId, "A member was removed.");
+});
+
+const createInvitationTx = db.transaction((workspaceId, invitation, userName) => {
+  db.prepare(`
+    INSERT INTO invitations (id, workspace_id, invited_user_id, invited_email, invited_name, role, status, invited_by_id, created_at, responded_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    invitation.id,
+    invitation.workspaceId,
+    invitation.invitedUserId,
+    invitation.invitedEmail,
+    invitation.invitedName,
+    invitation.role,
+    invitation.status,
+    invitation.invitedById,
+    invitation.createdAt,
+    invitation.respondedAt
+  );
+
+  logActivity(workspaceId, `Invitation sent to '${userName}'.`);
+});
+
+const respondToJoinRequestTx = db.transaction((workspaceId, request, status) => {
+  db.prepare("UPDATE workspace_join_requests SET status = ? WHERE id = ?").run(status, request.id);
+
+  if (status === "Approved") {
+    const user = db.prepare("SELECT name, email FROM users WHERE id = ?").get(request.user_id);
+    const now = new Date().toISOString();
+    db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Member', ?)")
+      .run(uid("wm-"), workspaceId, request.user_id, now);
+    db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, 'Member', ?)")
+      .run(uid("m-"), workspaceId, request.user_id, user?.name || "Member", user?.email || "");
+    logActivity(workspaceId, "A join request was approved.");
+  }
+});
+
 const listWorkspaceMembers = (workspaceId) =>
   db.prepare(`
     SELECT wm.id, wm.workspace_id, wm.user_id, wm.role, wm.joined_at, u.name, u.email
@@ -96,27 +197,8 @@ router.post("/", requireAuth, route((req, res) => {
   const { name, description = "" } = req.body;
   if (!name) return res.status(400).json({ error: "name is required" });
 
-  const id = uid("ws-");
-  const now = new Date().toISOString();
-  db.prepare("INSERT INTO workspaces (id, name, description, created_at, owner_id) VALUES (?, ?, ?, ?, ?)")
-    .run(id, name, description, now, req.userId);
-
-  const owner = db.prepare("SELECT name, email FROM users WHERE id = ?").get(req.userId);
-  db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Owner', ?)")
-    .run(uid("wm-"), id, req.userId, now);
-  db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(uid("m-"), id, req.userId, owner?.name || "Owner", "Owner", owner?.email || "");
-
-  logActivity(id, `Workspace '${name}' created.`);
-  res.status(201).json({
-    id,
-    name,
-    description,
-    createdAt: now,
-    ownerId: req.userId,
-    my_role: "Owner",
-    current_role: "Owner",
-  });
+  const workspace = createWorkspaceTx(name, description, req.userId);
+  res.status(201).json(workspace);
 }));
 
 router.delete("/:id", requireAuth, route((req, res) => {
@@ -154,23 +236,8 @@ router.post("/:wsId/members", requireAuth, requireWorkspaceAdmin, route((req, re
     return res.status(409).json({ error: "User is already a member of this workspace" });
   }
 
-  const now = new Date().toISOString();
-  const memberId = uid("wm-");
-  db.prepare("INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)")
-    .run(memberId, req.params.wsId, user.id, role, now);
-  db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(uid("m-"), req.params.wsId, user.id, user.name, role, user.email);
-
-  logActivity(req.params.wsId, `${user.name} was added as ${role}.`);
-  res.status(201).json({
-    id: memberId,
-    workspaceId: req.params.wsId,
-    userId: user.id,
-    name: user.name,
-    email: user.email,
-    role,
-    joinedAt: now,
-  });
+  const createdMember = addWorkspaceMemberTx(req.params.wsId, user, role);
+  res.status(201).json(createdMember);
 }));
 
 router.patch("/:wsId/members/:userId", requireAuth, requireWorkspaceAdmin, route((req, res) => {
@@ -182,13 +249,7 @@ router.patch("/:wsId/members/:userId", requireAuth, requireWorkspaceAdmin, route
   const membership = getWorkspaceMembership(req.params.wsId, req.params.userId);
   if (!membership) return res.status(404).json({ error: "User is not a member" });
 
-  db.prepare("UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?")
-    .run(role, req.params.wsId, req.params.userId);
-  db.prepare("UPDATE members SET role = ? WHERE workspace_id = ? AND user_id = ?")
-    .run(role, req.params.wsId, req.params.userId);
-
-  const updated = listWorkspaceMembers(req.params.wsId).find((member) => member.user_id === req.params.userId);
-  logActivity(req.params.wsId, "Member role updated.");
+  const updated = updateWorkspaceMemberRoleTx(req.params.wsId, req.params.userId, role);
   res.json(updated);
 }));
 
@@ -203,12 +264,7 @@ router.delete("/:wsId/members/:userId", requireAuth, requireWorkspaceAdmin, rout
   const membership = getWorkspaceMembership(req.params.wsId, req.params.userId);
   if (!membership) return res.status(404).json({ error: "User is not a member" });
 
-  db.prepare("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?")
-    .run(req.params.wsId, req.params.userId);
-  db.prepare("DELETE FROM members WHERE workspace_id = ? AND user_id = ?")
-    .run(req.params.wsId, req.params.userId);
-
-  logActivity(req.params.wsId, "A member was removed.");
+  removeWorkspaceMemberTx(req.params.wsId, req.params.userId);
   res.json({ ok: true });
 }));
 
@@ -259,23 +315,7 @@ router.post("/:wsId/invitations", requireAuth, requireWorkspaceAdmin, route((req
     respondedAt: null,
   };
 
-  db.prepare(`
-    INSERT INTO invitations (id, workspace_id, invited_user_id, invited_email, invited_name, role, status, invited_by_id, created_at, responded_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    invitation.id,
-    invitation.workspaceId,
-    invitation.invitedUserId,
-    invitation.invitedEmail,
-    invitation.invitedName,
-    invitation.role,
-    invitation.status,
-    invitation.invitedById,
-    invitation.createdAt,
-    invitation.respondedAt
-  );
-
-  logActivity(req.params.wsId, `Invitation sent to '${user.name}'.`);
+  createInvitationTx(req.params.wsId, invitation, user.name);
   res.status(201).json(invitation);
 }));
 
@@ -331,17 +371,7 @@ router.patch("/:wsId/join-requests/:requestId", requireAuth, requireWorkspaceAdm
   if (!request) return res.status(404).json({ error: "Request not found" });
   if (request.status !== "Pending") return res.status(400).json({ error: "Request already processed" });
 
-  db.prepare("UPDATE workspace_join_requests SET status = ? WHERE id = ?").run(status, request.id);
-
-  if (status === "Approved") {
-    const user = db.prepare("SELECT name, email FROM users WHERE id = ?").get(request.user_id);
-    const now = new Date().toISOString();
-    db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Member', ?)")
-      .run(uid("wm-"), req.params.wsId, request.user_id, now);
-    db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, 'Member', ?)")
-      .run(uid("m-"), req.params.wsId, request.user_id, user?.name || "Member", user?.email || "");
-    logActivity(req.params.wsId, "A join request was approved.");
-  }
+  respondToJoinRequestTx(req.params.wsId, request, status);
 
   res.json({ ok: true, status });
 }));

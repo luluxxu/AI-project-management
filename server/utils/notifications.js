@@ -57,7 +57,7 @@ function buildReminderRows(task) {
   });
 }
 
-export function syncTaskNotifications(taskId) {
+function syncTaskNotificationsImpl(taskId) {
   const task = typeof taskId === "string"
     ? db.prepare("SELECT * FROM tasks WHERE id = ?").get(taskId)
     : taskId;
@@ -85,13 +85,25 @@ export function syncTaskNotifications(taskId) {
   }
 }
 
+const syncTaskNotificationsTx = db.transaction((taskId) => {
+  syncTaskNotificationsImpl(taskId);
+});
+
+export function syncTaskNotifications(taskId) {
+  syncTaskNotificationsTx(taskId);
+}
+
 export function deleteTaskNotifications(taskId) {
   db.prepare("DELETE FROM notifications WHERE task_id = ?").run(taskId);
 }
 
-export function syncAllTaskNotifications() {
+const syncAllTaskNotificationsTx = db.transaction(() => {
   const tasks = db.prepare("SELECT id FROM tasks").all();
   for (const task of tasks) {
-    syncTaskNotifications(task.id);
+    syncTaskNotificationsImpl(task.id);
   }
+});
+
+export function syncAllTaskNotifications() {
+  syncAllTaskNotificationsTx();
 }

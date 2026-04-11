@@ -15,25 +15,9 @@ const respondToInvitationTx = db.transaction((invitation, action, userId) => {
     .run(nextStatus, respondedAt, invitation.id);
 
   if (action === "accept") {
-    const existingMember = db.prepare(
-      "SELECT id FROM members WHERE workspace_id = ? AND user_id = ?"
-    ).get(invitation.workspace_id, userId);
     const existingWorkspaceMember = db.prepare(
       "SELECT id FROM workspace_members WHERE workspace_id = ? AND user_id = ?"
     ).get(invitation.workspace_id, userId);
-
-    if (!existingMember) {
-      db.prepare(
-        "INSERT INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run(
-        uid("m-"),
-        invitation.workspace_id,
-        userId,
-        invitation.invited_name,
-        invitation.role,
-        invitation.invited_email
-      );
-    }
 
     if (!existingWorkspaceMember) {
       db.prepare(

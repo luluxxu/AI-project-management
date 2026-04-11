@@ -28,11 +28,7 @@ function resolveAssigneeUserId(task) {
     "SELECT user_id FROM workspace_members WHERE id = ? AND workspace_id = ?"
   ).get(task.assignee_id, task.workspace_id);
   if (workspaceMember?.user_id) return workspaceMember.user_id;
-
-  const legacyMember = db.prepare(
-    "SELECT user_id FROM members WHERE id = ? AND workspace_id = ?"
-  ).get(task.assignee_id, task.workspace_id);
-  return legacyMember?.user_id || "";
+  return "";
 }
 
 function buildReminderRows(task) {

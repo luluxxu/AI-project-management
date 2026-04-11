@@ -230,18 +230,18 @@ for (const row of ownersWithoutMembership) {
   ).run(`wm-${row.workspace_id}-owner`, row.workspace_id, row.user_id, new Date().toISOString());
 }
 
-// Keep the legacy members table in sync for routes/components that still read from it.
+// One-time migration: copy any legacy membership rows into workspace_members.
 db.prepare(`
-  INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email)
+  INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at)
   SELECT
-    'm-' || substr(hex(randomblob(8)), 1, 8),
-    wm.workspace_id,
-    wm.user_id,
-    u.name,
-    wm.role,
-    u.email
-  FROM workspace_members wm
-  JOIN users u ON u.id = wm.user_id
+    'wm-' || substr(hex(randomblob(8)), 1, 8),
+    m.workspace_id,
+    m.user_id,
+    m.role,
+    COALESCE(w.created_at, datetime('now'))
+  FROM members m
+  JOIN workspaces w ON w.id = m.workspace_id
+  WHERE m.user_id IS NOT NULL AND m.user_id <> ''
 `).run();
 
 export default db;

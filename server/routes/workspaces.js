@@ -27,8 +27,6 @@ const createWorkspaceTx = db.transaction((name, description, userId) => {
   const owner = db.prepare("SELECT name, email FROM users WHERE id = ?").get(userId);
   db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Owner', ?)")
     .run(uid("wm-"), id, userId, now);
-  db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(uid("m-"), id, userId, owner?.name || "Owner", "Owner", owner?.email || "");
 
   logActivity(id, `Workspace '${name}' created.`);
 
@@ -49,8 +47,6 @@ const addWorkspaceMemberTx = db.transaction((workspaceId, user, role) => {
 
   db.prepare("INSERT INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)")
     .run(memberId, workspaceId, user.id, role, now);
-  db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(uid("m-"), workspaceId, user.id, user.name, role, user.email);
 
   logActivity(workspaceId, `${user.name} was added as ${role}.`);
 
@@ -68,8 +64,6 @@ const addWorkspaceMemberTx = db.transaction((workspaceId, user, role) => {
 const updateWorkspaceMemberRoleTx = db.transaction((workspaceId, userId, role) => {
   db.prepare("UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?")
     .run(role, workspaceId, userId);
-  db.prepare("UPDATE members SET role = ? WHERE workspace_id = ? AND user_id = ?")
-    .run(role, workspaceId, userId);
 
   logActivity(workspaceId, "Member role updated.");
   return listWorkspaceMembers(workspaceId).find((member) => member.user_id === userId);
@@ -77,8 +71,6 @@ const updateWorkspaceMemberRoleTx = db.transaction((workspaceId, userId, role) =
 
 const removeWorkspaceMemberTx = db.transaction((workspaceId, userId) => {
   db.prepare("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?")
-    .run(workspaceId, userId);
-  db.prepare("DELETE FROM members WHERE workspace_id = ? AND user_id = ?")
     .run(workspaceId, userId);
 
   logActivity(workspaceId, "A member was removed.");
@@ -112,8 +104,6 @@ const respondToJoinRequestTx = db.transaction((workspaceId, request, status) => 
     const now = new Date().toISOString();
     db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Member', ?)")
       .run(uid("wm-"), workspaceId, request.user_id, now);
-    db.prepare("INSERT OR IGNORE INTO members (id, workspace_id, user_id, name, role, email) VALUES (?, ?, ?, ?, 'Member', ?)")
-      .run(uid("m-"), workspaceId, request.user_id, user?.name || "Member", user?.email || "");
     logActivity(workspaceId, "A join request was approved.");
   }
 });
@@ -124,25 +114,8 @@ const listWorkspaceMembers = (workspaceId) =>
     FROM workspace_members wm
     JOIN users u ON u.id = wm.user_id
     WHERE wm.workspace_id = ?
-
-    UNION ALL
-
-    SELECT m.id, m.workspace_id, m.user_id, m.role, w.created_at AS joined_at, m.name, m.email
-    FROM members m
-    JOIN workspaces w ON w.id = m.workspace_id
-    WHERE m.workspace_id = ?
-      AND (
-        m.user_id IS NULL
-        OR m.user_id = ''
-        OR m.user_id NOT IN (
-          SELECT user_id
-          FROM workspace_members
-          WHERE workspace_id = ?
-        )
-      )
-
     ORDER BY joined_at
-  `).all(workspaceId, workspaceId, workspaceId);
+  `).all(workspaceId);
 
 router.get("/discover", requireAuth, route((req, res) => {
   const workspaces = db.prepare(`
@@ -152,24 +125,15 @@ router.get("/discover", requireAuth, route((req, res) => {
       w.description,
       (
         SELECT COUNT(*)
-        FROM (
-          SELECT user_id
-          FROM workspace_members
-          WHERE workspace_id = w.id
-          UNION
-          SELECT user_id
-          FROM members
-          WHERE workspace_id = w.id AND user_id IS NOT NULL AND user_id <> ''
-        ) joined_members
+        FROM workspace_members
+        WHERE workspace_id = w.id
       ) AS member_count
     FROM workspaces w
     WHERE w.id NOT IN (
       SELECT workspace_id FROM workspace_members WHERE user_id = ?
-      UNION
-      SELECT workspace_id FROM members WHERE user_id = ?
     )
     ORDER BY w.created_at DESC
-  `).all(req.userId, req.userId);
+  `).all(req.userId);
   res.json(workspaces);
 }));
 
@@ -178,24 +142,21 @@ router.get("/", requireAuth, route((req, res) => {
     ? db.prepare(`
         SELECT
           w.*,
-          COALESCE(wm.role, m.role, 'Admin') AS my_role,
-          COALESCE(wm.role, m.role, 'Admin') AS current_role
+          COALESCE(wm.role, 'Admin') AS my_role,
+          COALESCE(wm.role, 'Admin') AS current_role
         FROM workspaces w
         LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = ?
-        LEFT JOIN members m ON m.workspace_id = w.id AND m.user_id = ?
         ORDER BY w.created_at
-      `).all(req.userId, req.userId)
+      `).all(req.userId)
     : db.prepare(`
         SELECT DISTINCT
           w.*,
-          COALESCE(wm.role, m.role) AS my_role,
-          COALESCE(wm.role, m.role) AS current_role
+          wm.role AS my_role,
+          wm.role AS current_role
         FROM workspaces w
-        LEFT JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = ?
-        LEFT JOIN members m ON m.workspace_id = w.id AND m.user_id = ?
-        WHERE wm.user_id IS NOT NULL OR m.user_id IS NOT NULL
+        JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = ?
         ORDER BY w.created_at
-      `).all(req.userId, req.userId);
+      `).all(req.userId);
   res.json(workspaces);
 }));
 

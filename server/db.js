@@ -280,6 +280,99 @@ const migrations = [
       `);
     },
   },
+  {
+    version: 6,
+    name: "add_data_integrity_constraints",
+    up: () => {
+      db.exec(`
+        CREATE TRIGGER IF NOT EXISTS validate_users_before_insert
+        BEFORE INSERT ON users FOR EACH ROW
+        WHEN length(trim(COALESCE(NEW.name, ''))) = 0
+          OR length(trim(COALESCE(NEW.email, ''))) = 0
+        BEGIN SELECT RAISE(ABORT, 'User name and email are required'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_users_before_update
+        BEFORE UPDATE ON users FOR EACH ROW
+        WHEN length(trim(COALESCE(NEW.name, ''))) = 0
+          OR length(trim(COALESCE(NEW.email, ''))) = 0
+        BEGIN SELECT RAISE(ABORT, 'User name and email are required'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_workspaces_before_insert
+        BEFORE INSERT ON workspaces FOR EACH ROW
+        WHEN length(trim(COALESCE(NEW.name, ''))) = 0
+        BEGIN SELECT RAISE(ABORT, 'Workspace name is required'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_workspaces_before_update
+        BEFORE UPDATE ON workspaces FOR EACH ROW
+        WHEN length(trim(COALESCE(NEW.name, ''))) = 0
+        BEGIN SELECT RAISE(ABORT, 'Workspace name is required'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_projects_integrity_before_insert
+        BEFORE INSERT ON projects FOR EACH ROW
+        WHEN length(trim(COALESCE(NEW.name, ''))) = 0
+          OR (
+            COALESCE(NEW.start_date, '') <> ''
+            AND COALESCE(NEW.end_date, '') <> ''
+            AND NEW.end_date < NEW.start_date
+          )
+        BEGIN SELECT RAISE(ABORT, 'Project name is required and end date must not be before start date'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_projects_integrity_before_update
+        BEFORE UPDATE ON projects FOR EACH ROW
+        WHEN length(trim(COALESCE(NEW.name, ''))) = 0
+          OR (
+            COALESCE(NEW.start_date, '') <> ''
+            AND COALESCE(NEW.end_date, '') <> ''
+            AND NEW.end_date < NEW.start_date
+          )
+        BEGIN SELECT RAISE(ABORT, 'Project name is required and end date must not be before start date'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_tasks_integrity_before_insert
+        BEFORE INSERT ON tasks FOR EACH ROW
+        WHEN length(trim(COALESCE(NEW.title, ''))) = 0
+          OR NEW.effort < 1
+          OR NEW.effort > 8
+          OR (
+            COALESCE(NEW.planned_start, '') <> ''
+            AND COALESCE(NEW.planned_end, '') <> ''
+            AND NEW.planned_end < NEW.planned_start
+          )
+        BEGIN SELECT RAISE(ABORT, 'Task title is required, effort must be between 1 and 8, and planned end must not be before planned start'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_tasks_integrity_before_update
+        BEFORE UPDATE ON tasks FOR EACH ROW
+        WHEN length(trim(COALESCE(NEW.title, ''))) = 0
+          OR NEW.effort < 1
+          OR NEW.effort > 8
+          OR (
+            COALESCE(NEW.planned_start, '') <> ''
+            AND COALESCE(NEW.planned_end, '') <> ''
+            AND NEW.planned_end < NEW.planned_start
+          )
+        BEGIN SELECT RAISE(ABORT, 'Task title is required, effort must be between 1 and 8, and planned end must not be before planned start'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_workspace_members_before_insert
+        BEFORE INSERT ON workspace_members FOR EACH ROW
+        WHEN NEW.role NOT IN ('Owner', 'Admin', 'Member')
+        BEGIN SELECT RAISE(ABORT, 'Workspace member role is invalid'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_workspace_members_before_update
+        BEFORE UPDATE ON workspace_members FOR EACH ROW
+        WHEN NEW.role NOT IN ('Owner', 'Admin', 'Member')
+        BEGIN SELECT RAISE(ABORT, 'Workspace member role is invalid'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_join_requests_before_insert
+        BEFORE INSERT ON workspace_join_requests FOR EACH ROW
+        WHEN NEW.status NOT IN ('Pending', 'Approved', 'Rejected')
+        BEGIN SELECT RAISE(ABORT, 'Join request status is invalid'); END;
+
+        CREATE TRIGGER IF NOT EXISTS validate_join_requests_before_update
+        BEFORE UPDATE ON workspace_join_requests FOR EACH ROW
+        WHEN NEW.status NOT IN ('Pending', 'Approved', 'Rejected')
+        BEGIN SELECT RAISE(ABORT, 'Join request status is invalid'); END;
+      `);
+    },
+  },
 ];
 
 function applyMigrations() {

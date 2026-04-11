@@ -25,6 +25,12 @@ export function errorHandler(error, _req, res, _next) {
       "Invalid task status or priority",
       "Invalid member role",
       "Task project must belong to the same workspace",
+      "User name and email are required",
+      "Workspace name is required",
+      "Project name is required and end date must not be before start date",
+      "Task title is required, effort must be between 1 and 8, and planned end must not be before planned start",
+      "Workspace member role is invalid",
+      "Join request status is invalid",
     ];
 
     if (validationErrors.includes(error.message)) {

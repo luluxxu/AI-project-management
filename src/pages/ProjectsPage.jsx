@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import SectionCard from "../components/SectionCard";
 import SimpleTable from "../components/SimpleTable";
 import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import EditTaskDialog from "../components/EditTaskDialog";
 
 const emptyProject = {
   name: "",
@@ -30,6 +31,7 @@ export default function ProjectsPage({ store }) {
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [taskForm, setTaskForm] = useState({ ...emptyTask, projectId: store.scopedProjects[0]?.id || "" });
   const [selectedProjectId, setSelectedProjectId] = useState(store.scopedProjects[0]?.id || "all");
+  const [editingTask, setEditingTask] = useState(null);
 
   const filteredTasks = useMemo(() => {
     if (selectedProjectId === "all") return store.scopedTasks;
@@ -142,6 +144,13 @@ export default function ProjectsPage({ store }) {
 
   return (
     <div className="page-grid">
+      <EditTaskDialog
+        task={editingTask}
+        isOpen={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        store={store}
+      />
+
       <div className="two-col-grid">
         <SectionCard title="Create Project" subtitle={`Add a new project for ${teamName}`}>
           <div className="form-grid">
@@ -268,7 +277,26 @@ export default function ProjectsPage({ store }) {
               label: "Assignee",
               render: (row) => store.scopedMembers.find((member) => (member.userId || member.id) === row.assigneeId)?.name || "Unassigned",
             },
-            { key: "actions", label: "Actions", render: (row) => <button className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition" onClick={() => handleDeleteTask(row)}>Delete</button> },
+            {
+              key: "actions",
+              label: "Actions",
+              render: (row) => (
+                <div className="flex gap-2">
+                  <button
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:bg-slate-50"
+                    onClick={() => setEditingTask(row)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="bg-red-50 border-red-200 text-red-800 rounded-xl px-4 py-2 hover:bg-red-100 transition"
+                    onClick={() => handleDeleteTask(row)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ),
+            },
           ]}
           rows={filteredTasks}
         />

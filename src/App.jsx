@@ -85,7 +85,7 @@ function AuthenticatedApp() {
 
   return (
     <div className="grid min-h-screen grid-cols-[292px_1fr] bg-[radial-gradient(circle_at_top_left,_rgba(255,251,236,0.98),_rgba(244,237,205,0.92)_38%,_rgba(223,214,176,0.78)_100%)] max-md:grid-cols-1">
-      <aside className="m-4 flex flex-col gap-5 rounded-[28px] border border-white/10 bg-[#1B0C0C]/96 p-6 text-slate-50 shadow-[0_24px_60px_rgba(27,12,12,0.34)] max-md:m-0 max-md:rounded-none max-md:border-0">
+      <aside className="sticky top-4 m-4 flex h-[calc(100vh-2rem)] flex-col gap-5 overflow-hidden rounded-[28px] border border-white/10 bg-[#1B0C0C]/96 p-6 text-slate-50 shadow-[0_24px_60px_rgba(27,12,12,0.34)] max-md:static max-md:m-0 max-md:h-auto max-md:rounded-none max-md:border-0">
         <div>
           <div className="text-2xl font-extrabold tracking-tight">TaskPilot AI</div>
           <p className="mt-1 text-sm text-[#d8cfbb]">Project management platform</p>

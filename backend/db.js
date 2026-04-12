@@ -374,6 +374,15 @@ const migrations = [
       `);
     },
   },
+  {
+    version: 7,
+    name: "add_notification_emailed_at",
+    up: () => {
+      if (!columnExists("notifications", "emailed_at")) {
+        db.exec("ALTER TABLE notifications ADD COLUMN emailed_at TEXT");
+      }
+    },
+  },
 ];
 
 function applyMigrations() {

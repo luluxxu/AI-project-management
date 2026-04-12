@@ -14,6 +14,7 @@ import userRoutes       from "./routes/users.js";
 import aiRoutes         from "./routes/ai.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { syncAllTaskNotifications } from "./utils/notifications.js";
+import { startEmailCron } from "./utils/emailCron.js";
 
 dotenv.config();
 
@@ -54,6 +55,7 @@ app.use(errorHandler);
 if (process.env.NODE_ENV !== "test") {
   app.listen(PORT, () => {
     console.log(`TaskPilot API running on http://localhost:${PORT}`);
+    startEmailCron();
   });
 }
 

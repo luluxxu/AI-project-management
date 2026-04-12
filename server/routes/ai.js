@@ -1,8 +1,18 @@
 import { Router } from "express";
 import OpenAI from "openai";
+import rateLimit from "express-rate-limit";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,  // 1 minute
+  max: 10,              // 10 requests per minute per user
+  keyGenerator: (req) => req.userId,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many AI requests. Please try again in a minute." },
+});
 
 const CHATGPT_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const MAX_TOKENS = 1400;
@@ -215,7 +225,7 @@ router.get("/status", requireAuth, (_req, res) => {
 });
 
 // POST /api/v1/ai/extract-tasks
-router.post("/extract-tasks", requireAuth, async (req, res) => {
+router.post("/extract-tasks", requireAuth, aiLimiter, async (req, res) => {
   const provider = resolveProvider(req.body?.provider);
   if (!provider) {
     return res.status(503).json({
@@ -266,7 +276,7 @@ Rules:
 });
 
 // POST /api/v1/ai/daily-plan
-router.post("/daily-plan", requireAuth, async (req, res) => {
+router.post("/daily-plan", requireAuth, aiLimiter, async (req, res) => {
   const provider = resolveProvider(req.body?.provider);
   const { tasks = [], projects = [], members = [], busyBlocks = [], date, workHours = {} } = req.body;
   const targetDate = date || new Date().toISOString().slice(0, 10);
@@ -355,7 +365,7 @@ Return valid JSON only.`,
 });
 
 // POST /api/v1/ai/course-schedule
-router.post("/course-schedule", requireAuth, async (req, res) => {
+router.post("/course-schedule", requireAuth, aiLimiter, async (req, res) => {
   const provider = resolveProvider(req.body?.provider);
   if (!provider) {
     return res.status(503).json({
@@ -405,7 +415,7 @@ Return strict JSON only.`,
 });
 
 // POST /api/v1/ai/chat
-router.post("/chat", requireAuth, async (req, res) => {
+router.post("/chat", requireAuth, aiLimiter, async (req, res) => {
   const provider = resolveProvider(req.body?.provider);
   if (!provider) {
     return res.status(503).json({

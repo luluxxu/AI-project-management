@@ -184,3 +184,40 @@ describe("POST /api/v1/ai/course-schedule", () => {
     expect([400, 503]).toContain(res.status);
   });
 });
+
+describe("AI rate limiting", () => {
+  it("returns 429 after exceeding 10 requests per minute", async () => {
+    // Send 10 requests to hit the limit
+    for (let i = 0; i < 10; i++) {
+      await request(app)
+        .post("/api/v1/ai/extract-tasks")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ text: "test" });
+    }
+
+    // 11th request should be rate-limited
+    const res = await request(app)
+      .post("/api/v1/ai/extract-tasks")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ text: "test" });
+
+    expect(res.status).toBe(429);
+    expect(res.body.error).toMatch(/too many/i);
+  });
+
+  it("includes rate limit headers", async () => {
+    // Register a fresh user to get a clean rate limit window
+    const freshRes = await request(app)
+      .post("/api/v1/auth/register")
+      .send({ name: "RateUser", email: "rate@test.com", password: "pass1234" });
+    const freshToken = freshRes.body.token;
+
+    const res = await request(app)
+      .post("/api/v1/ai/daily-plan")
+      .set("Authorization", `Bearer ${freshToken}`)
+      .send({ tasks: [], date: "2026-04-11" });
+
+    expect(res.headers["ratelimit-limit"]).toBeDefined();
+    expect(res.headers["ratelimit-remaining"]).toBeDefined();
+  });
+});

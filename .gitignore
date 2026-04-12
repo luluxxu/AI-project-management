@@ -32,9 +32,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # SQLite database files (generated at runtime)
-server/*.db
-server/*.db-wal
-server/*.db-shm
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
 
 # Claude Code
 .claude/

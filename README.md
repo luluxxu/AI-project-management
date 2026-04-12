@@ -8,6 +8,7 @@ A full-stack project management platform with AI-powered task assistance, built 
 - **Multi-workspace support** — create and switch between separate workspaces
 - **Projects** — create, edit, archive/restore, and delete projects with status, priority, and date range
 - **Tasks** — manage tasks with title, description, status, priority, assignee, due date, and effort estimate (1-8 hours)
+- **Sorting** — click column headers to sort tasks and projects by any field
 - **Team collaboration** — role-based access control (Owner / Admin / Member), invitation and join-request workflows
 - **Notifications** — automatic reminders for tasks due in 3 days, 1 day, and today
 - **Activity log** — automatic audit trail of all changes
@@ -16,7 +17,9 @@ A full-stack project management platform with AI-powered task assistance, built 
 ### AI Features
 - **Task extraction** — paste meeting notes or a description; AI extracts a structured task list
 - **Daily planning** — AI generates a prioritized plan for the day based on current tasks (with heuristic fallback when no API key is configured)
+- **Project planner** — AI generates milestones and task breakdown for a project given name, description, and date range
 - **AI chat assistant** — ask questions about your workspace; AI can suggest creating or updating tasks
+- **Rate limited** — AI endpoints are limited to 10 requests per user per minute
 
 ### Authentication & Authorization
 - Email + password registration and login
@@ -35,6 +38,7 @@ A full-stack project management platform with AI-powered task assistance, built 
 | Database | SQLite via `better-sqlite3` (WAL mode, foreign keys) |
 | Auth | JWT (`jsonwebtoken`), bcrypt (`bcryptjs`) |
 | AI | OpenAI-compatible API (configurable via `OPENAI_API_KEY`) |
+| Rate Limiting | `express-rate-limit` |
 | Testing | Vitest, Supertest |
 | Linting | ESLint 9 (flat config) |
 | Dev tooling | Vite proxy, `concurrently` |
@@ -45,42 +49,51 @@ A full-stack project management platform with AI-powered task assistance, built 
 
 ```
 ai-project-management/
-├── server/                        # Express backend (port 3001)
+├── frontend/                      # React frontend (standalone package)
+│   ├── package.json               # Frontend-only dependencies
+│   ├── vite.config.js             # Vite config + API proxy
+│   ├── eslint.config.js           # Frontend lint rules
+│   ├── index.html
+│   └── src/
+│       ├── App.jsx                # Root: routing + layout + sidebar
+│       ├── context/               # AuthContext, ConfirmDialogContext
+│       ├── utils/
+│       │   ├── api.js             # Fetch wrapper with JWT injection
+│       │   ├── useProjectStore.js # Central state management hook
+│       │   ├── claudeApi.js       # AI API integration
+│       │   ├── aiHelpers.js       # Heuristic fallback (no API key)
+│       │   └── analytics.js       # Workspace statistics
+│       ├── components/            # Reusable UI components
+│       ├── pages/                 # Page components
+│       └── __tests__/             # Frontend tests
+│
+├── backend/                       # Express backend (port 3001)
 │   ├── index.js                   # Server entry point
 │   ├── db.js                      # SQLite setup, migrations, seeding
 │   ├── middleware/
 │   │   ├── auth.js                # JWT verification, role-based access
 │   │   ├── validation.js          # Input validation helpers
+│   │   ├── pagination.js          # Pagination utilities
 │   │   └── error.js               # Global error & not-found handlers
 │   ├── routes/
 │   │   ├── auth.js                # Register, login, GET /me
 │   │   ├── workspaces.js          # Workspace CRUD, members, invitations, join requests
 │   │   ├── projects.js            # Project CRUD, archive/restore
 │   │   ├── tasks.js               # Task CRUD, archive/restore
-│   │   ├── members.js             # Legacy member management
+│   │   ├── members.js             # Member management
 │   │   ├── activities.js          # Activity log
 │   │   ├── invitations.js         # Invitation accept/reject
 │   │   ├── notifications.js       # Task reminders, mark read
 │   │   ├── users.js               # Admin user management
-│   │   └── ai.js                  # AI task extraction, daily planning, chat
+│   │   └── ai.js                  # AI task extraction, planning, chat
 │   ├── utils/
 │   │   ├── workspace.js           # uid(), logActivity()
 │   │   └── notifications.js       # Task notification sync
 │   └── __tests__/                 # Backend tests (Vitest + Supertest)
-├── src/                           # React frontend (port 5173)
-│   ├── context/                   # AuthContext, ConfirmDialogContext
-│   ├── utils/
-│   │   ├── api.js                 # Fetch wrapper with JWT injection
-│   │   ├── useProjectStore.js     # Central state hook
-│   │   ├── claudeApi.js           # AI integration
-│   │   └── analytics.js           # Workspace statistics
-│   ├── components/                # Reusable UI components
-│   ├── pages/                     # Page components
-│   └── __tests__/                 # Frontend unit tests
-├── eslint.config.js               # ESLint flat config
-├── vitest.config.js               # Vitest configuration
-├── vite.config.js                 # Vite config + /api proxy
-└── package.json
+│
+├── package.json                   # Root: backend deps + orchestration scripts
+├── vitest.config.js               # Backend test configuration
+└── eslint.config.js               # Backend lint rules
 ```
 
 ---
@@ -101,7 +114,7 @@ cd AI-project-management
 ### 2. Install dependencies
 
 ```bash
-npm install
+npm run install:all
 ```
 
 ### 3. Start the development servers
@@ -118,7 +131,7 @@ This starts both:
 
 Go to [http://localhost:5173](http://localhost:5173). Register a new account, then start creating workspaces, projects, and tasks.
 
-> The SQLite database is created automatically at `server/taskpilot.db` on first run.
+> The SQLite database is created automatically at `backend/taskpilot.db` on first run.
 
 ---
 
@@ -132,33 +145,42 @@ The AI features require an OpenAI-compatible API key.
    ```
 2. Restart the server
 
-Without an API key, the daily planner falls back to a built-in heuristic engine. Task extraction and chat features return a "not configured" message.
+Without an API key, the daily planner falls back to a built-in heuristic engine. Task extraction, project planner, and chat features return a "not configured" message.
 
 ---
 
 ## Testing
 
-The project includes 165 tests covering all backend API routes and frontend utility functions.
+The project includes 174 tests covering all backend API routes and frontend utility functions.
 
 ```bash
-npm test              # Run all tests once
-npm run test:watch    # Watch mode
+npm test               # Run all tests (backend + frontend)
+npm run test:backend   # Backend only (165 tests)
+npm run test:frontend  # Frontend only (9 tests)
+npm run test:watch     # Backend watch mode
 ```
 
 ### Test Coverage
+
+**Backend** (`backend/__tests__/`)
 
 | Test File | Tests | Coverage |
 |---|---|---|
 | `validation.test.js` | 47 | Input validation functions and payload validators |
 | `auth.test.js` | 13 | Register, login, /me, token verification |
-| `crud.test.js` | 25 | Workspace/Project/Task CRUD, access control, archive cascade |
+| `crud.test.js` | 32 | Workspace/Project/Task CRUD, access control, archive cascade, pagination |
 | `members.test.js` | 9 | Member CRUD by membership ID, role updates, Owner protection |
 | `activities.test.js` | 5 | Activity log generation and access control |
 | `invitations.test.js` | 14 | Full invitation flow: create, accept, reject, guards |
 | `join-requests.test.js` | 14 | Join request flow: submit, approve, reject, re-apply |
 | `notifications.test.js` | 6 | Notification generation, mark read, access control |
 | `users.test.js` | 12 | Admin user management, role changes, self-delete guard |
-| `ai.test.js` | 11 | AI status, 503 fallback, heuristic daily planner |
+| `ai.test.js` | 13 | AI status, 503 fallback, heuristic daily planner, rate limiting |
+
+**Frontend** (`frontend/src/__tests__/`)
+
+| Test File | Tests | Coverage |
+|---|---|---|
 | `analytics.test.js` | 9 | Workspace statistics and task grouping |
 
 ---
@@ -166,11 +188,32 @@ npm run test:watch    # Watch mode
 ## Linting
 
 ```bash
-npm run lint          # Check for issues
+npm run lint          # Check backend + frontend
 npm run lint:fix      # Auto-fix where possible
 ```
 
-ESLint is configured with separate environments for frontend (browser + React hooks), backend (Node.js), and test files (Vitest globals).
+ESLint is configured separately for frontend (browser + React hooks) and backend (Node.js + Vitest globals).
+
+---
+
+## Pagination
+
+List endpoints support optional pagination via query parameters:
+
+```
+GET /api/v1/tasks/:wsId/tasks?page=1&limit=20
+```
+
+Without `page`/`limit`, endpoints return all results (backward compatible). When paginated, response headers include:
+
+| Header | Description |
+|---|---|
+| `X-Total-Count` | Total number of items |
+| `X-Page` | Current page number |
+| `X-Limit` | Items per page |
+| `X-Total-Pages` | Total pages |
+
+Paginated endpoints: tasks, projects, activities, notifications, workspace discover.
 
 ---
 
@@ -189,7 +232,7 @@ All endpoints are under `/api/v1/`. Endpoints except `/api/v1/auth/*` require `A
 | Method | Path | Description |
 |---|---|---|
 | GET | `/workspaces` | List user's workspaces |
-| GET | `/workspaces/discover` | Browse public workspaces |
+| GET | `/workspaces/discover` | Browse public workspaces (paginated) |
 | POST | `/workspaces` | Create workspace |
 | DELETE | `/workspaces/:id` | Delete workspace (Owner only) |
 | POST | `/workspaces/:id/archive` | Archive workspace + cascade |
@@ -205,7 +248,7 @@ All endpoints are under `/api/v1/`. Endpoints except `/api/v1/auth/*` require `A
 ### Projects
 | Method | Path | Description |
 |---|---|---|
-| GET | `/projects/:wsId/projects` | List projects |
+| GET | `/projects/:wsId/projects` | List projects (paginated) |
 | POST | `/projects/:wsId/projects` | Create project |
 | PATCH | `/projects/:id` | Update project |
 | DELETE | `/projects/:id` | Delete project |
@@ -215,7 +258,7 @@ All endpoints are under `/api/v1/`. Endpoints except `/api/v1/auth/*` require `A
 ### Tasks
 | Method | Path | Description |
 |---|---|---|
-| GET | `/tasks/:wsId/tasks` | List tasks |
+| GET | `/tasks/:wsId/tasks` | List tasks (paginated) |
 | POST | `/tasks/:wsId/tasks` | Create task |
 | PATCH | `/tasks/:id` | Update task |
 | DELETE | `/tasks/:id` | Delete task |
@@ -227,15 +270,16 @@ All endpoints are under `/api/v1/`. Endpoints except `/api/v1/auth/*` require `A
 |---|---|---|
 | GET | `/invitations` | List user's pending invitations |
 | POST | `/invitations/:id/respond` | Accept or reject invitation |
-| GET | `/notifications` | List task reminders |
+| GET | `/notifications` | List task reminders (paginated) |
 | PATCH | `/notifications/:id/read` | Mark notification as read |
 | GET | `/users` | List all users (Admin only) |
 | PATCH | `/users/:id` | Update user role (Admin only) |
 | DELETE | `/users/:id` | Delete user (Admin only) |
-| GET | `/activities/:wsId/activities` | Activity log |
+| GET | `/activities/:wsId/activities` | Activity log (paginated) |
 | GET | `/ai/status` | AI provider status |
 | POST | `/ai/extract-tasks` | Extract tasks from text |
 | POST | `/ai/daily-plan` | Generate daily plan |
+| POST | `/ai/project-plan` | Generate project milestones + tasks |
 | POST | `/ai/chat` | AI chat assistant |
 
 ---
@@ -267,11 +311,14 @@ Foreign keys with `ON DELETE CASCADE` — deleting a workspace removes all its p
 | Command | Description |
 |---|---|
 | `npm run dev` | Start frontend + backend together |
-| `npm run client` | Frontend only (Vite) |
-| `npm run server` | Backend only (Express) |
-| `npm run build` | Production build |
+| `npm run frontend` | Frontend only (Vite dev server) |
+| `npm run backend` | Backend only (Express) |
+| `npm run build` | Production build (frontend) |
 | `npm run preview` | Preview production build |
-| `npm test` | Run all tests |
-| `npm run test:watch` | Tests in watch mode |
-| `npm run lint` | ESLint check |
+| `npm test` | Run all tests (backend + frontend) |
+| `npm run test:backend` | Backend tests only |
+| `npm run test:frontend` | Frontend tests only |
+| `npm run test:watch` | Backend tests in watch mode |
+| `npm run lint` | ESLint check (backend + frontend) |
 | `npm run lint:fix` | ESLint auto-fix |
+| `npm run install:all` | Install all dependencies (root + frontend) |

@@ -170,7 +170,7 @@ function buildHeuristicDailyPlan({ tasks = [], date, workHours = {}, busyBlocks 
 
   return {
     provider: "heuristic",
-    orderedTasks: orderedTasks.map(({ effort, ...rest }) => rest),
+    orderedTasks: orderedTasks.map(({ effort: _effort, ...rest }) => rest),
     timeBlocks,
   };
 }

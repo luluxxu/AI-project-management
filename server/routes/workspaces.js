@@ -25,7 +25,6 @@ const createWorkspaceTx = db.transaction((name, description, userId) => {
   db.prepare("INSERT INTO workspaces (id, name, description, created_at, owner_id) VALUES (?, ?, ?, ?, ?)")
     .run(id, name, description, now, userId);
 
-  const owner = db.prepare("SELECT name, email FROM users WHERE id = ?").get(userId);
   db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Owner', ?)")
     .run(uid("wm-"), id, userId, now);
 
@@ -118,7 +117,6 @@ const respondToJoinRequestTx = db.transaction((workspaceId, request, status) => 
   db.prepare("UPDATE workspace_join_requests SET status = ? WHERE id = ?").run(status, request.id);
 
   if (status === "Approved") {
-    const user = db.prepare("SELECT name, email FROM users WHERE id = ?").get(request.user_id);
     const now = new Date().toISOString();
     db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Member', ?)")
       .run(uid("wm-"), workspaceId, request.user_id, now);

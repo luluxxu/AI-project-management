@@ -11,7 +11,7 @@ afterAll(() => cleanupTestDb());
 // admin@example.com is seeded by db.js with password "admin123"
 let adminToken, adminUserId;
 let userToken, userId;
-let user2Token, user2Id;
+let _user2Token, user2Id;
 
 beforeAll(async () => {
   // Login as seeded admin
@@ -31,7 +31,7 @@ beforeAll(async () => {
   const user2Res = await request(app)
     .post("/api/v1/auth/register")
     .send({ name: "User2", email: "user2@test.com", password: "pass1234" });
-  user2Token = user2Res.body.token;
+  _user2Token = user2Res.body.token;
   user2Id = user2Res.body.user.id;
 });
 

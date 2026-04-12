@@ -9,7 +9,7 @@ const { default: app } = await import("../index.js");
 afterAll(() => cleanupTestDb());
 
 let ownerToken, ownerUserId;
-let memberToken, memberUserId;
+let memberToken, _memberUserId;
 let outsiderToken;
 let workspaceId;
 let memberMembershipId; // the workspace_members row id for the "Member" user
@@ -25,7 +25,7 @@ beforeAll(async () => {
     .post("/api/v1/auth/register")
     .send({ name: "MemberUser", email: "member@test.com", password: "pass1234" });
   memberToken = memberRes.body.token;
-  memberUserId = memberRes.body.user.id;
+  _memberUserId = memberRes.body.user.id;
 
   const outsiderRes = await request(app)
     .post("/api/v1/auth/register")

@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",

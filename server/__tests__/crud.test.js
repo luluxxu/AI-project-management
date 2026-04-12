@@ -12,7 +12,7 @@ afterAll(() => {
 
 // Shared state across sequential tests
 let ownerToken, ownerUserId;
-let memberToken, memberUserId;
+let memberToken, _memberUserId;
 let outsiderToken;
 let workspaceId;
 let projectId;
@@ -32,7 +32,7 @@ beforeAll(async () => {
     .post("/api/v1/auth/register")
     .send({ name: "Member", email: "member@test.com", password: "pass1234" });
   memberToken = memberRes.body.token;
-  memberUserId = memberRes.body.user.id;
+  _memberUserId = memberRes.body.user.id;
 
   // Register outsider (never added to workspace)
   const outsiderRes = await request(app)

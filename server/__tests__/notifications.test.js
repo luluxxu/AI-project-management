@@ -39,8 +39,6 @@ beforeAll(async () => {
 });
 
 describe("Notification lifecycle", () => {
-  let notificationId;
-
   it("creating a task with dueDate and assignee generates notifications", async () => {
     // Create task assigned to owner with a near due date
     const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -67,9 +65,7 @@ describe("Notification lifecycle", () => {
     // due_3_days trigger would be in the past for tomorrow's task
     // At minimum we should have some notifications generated
     // Store one for mark-read test if available
-    if (res.body.length > 0) {
-      notificationId = res.body[0].id;
-    }
+    // Notifications verified via list endpoint above
   });
 
   it("task without assignee generates no notifications", async () => {

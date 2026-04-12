@@ -5,6 +5,7 @@ import { route } from "../middleware/error.js";
 import { validateProjectPayload } from "../middleware/validation.js";
 import { logActivity, uid } from "../utils/workspace.js";
 import { syncTaskNotifications } from "../utils/notifications.js";
+import { parsePagination, paginatedResponse } from "../middleware/pagination.js";
 
 const router = Router();
 
@@ -26,13 +27,28 @@ const setProjectArchivedStateTx = db.transaction((project, archivedAt) => {
 
 router.get("/:wsId/projects", requireAuth, requireWorkspaceAccess, route((req, res) => {
   const includeArchived = req.query.includeArchived === "true";
-  const projects = db.prepare(`
-    SELECT *
-    FROM projects
-    WHERE workspace_id = ?
-      AND (? = 1 OR archived_at IS NULL)
-  `).all(req.params.wsId, includeArchived ? 1 : 0);
-  res.json(projects);
+  const { paginate, page, limit, offset } = parsePagination(req.query);
+
+  if (!paginate) {
+    const projects = db.prepare(`
+      SELECT * FROM projects
+      WHERE workspace_id = ? AND (? = 1 OR archived_at IS NULL)
+    `).all(req.params.wsId, includeArchived ? 1 : 0);
+    return res.json(projects);
+  }
+
+  const total = db.prepare(`
+    SELECT COUNT(*) AS count FROM projects
+    WHERE workspace_id = ? AND (? = 1 OR archived_at IS NULL)
+  `).get(req.params.wsId, includeArchived ? 1 : 0).count;
+
+  const rows = db.prepare(`
+    SELECT * FROM projects
+    WHERE workspace_id = ? AND (? = 1 OR archived_at IS NULL)
+    LIMIT ? OFFSET ?
+  `).all(req.params.wsId, includeArchived ? 1 : 0, limit, offset);
+
+  paginatedResponse(res, { rows, total, page, limit });
 }));
 
 router.post("/:wsId/projects", requireAuth, requireWorkspaceAccess, route((req, res) => {

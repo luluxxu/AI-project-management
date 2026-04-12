@@ -361,6 +361,113 @@ describe("Workspace archive cascades to projects and tasks", () => {
   });
 });
 
+// ────────────── Pagination ──────────────
+describe("Pagination", () => {
+  let paginationWsId, paginationProjId;
+
+  beforeAll(async () => {
+    // Create workspace with multiple tasks for pagination testing
+    const wsRes = await request(app)
+      .post("/api/v1/workspaces")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Pagination WS" });
+    paginationWsId = wsRes.body.id;
+
+    const projRes = await request(app)
+      .post(`/api/v1/projects/${paginationWsId}/projects`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Pag Project", status: "Active", priority: "Medium" });
+    paginationProjId = projRes.body.id;
+
+    // Create 5 tasks
+    for (let i = 0; i < 5; i++) {
+      await request(app)
+        .post(`/api/v1/tasks/${paginationWsId}/tasks`)
+        .set("Authorization", `Bearer ${ownerToken}`)
+        .send({
+          projectId: paginationProjId,
+          title: `Pag Task ${i + 1}`,
+          status: "Todo",
+          priority: "Medium",
+          effort: 1,
+        });
+    }
+  });
+
+  it("returns all tasks without pagination params (backward compatible)", async () => {
+    const res = await request(app)
+      .get(`/api/v1/tasks/${paginationWsId}/tasks`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBe(5);
+    expect(res.headers["x-total-count"]).toBeUndefined();
+  });
+
+  it("returns paginated tasks with page and limit", async () => {
+    const res = await request(app)
+      .get(`/api/v1/tasks/${paginationWsId}/tasks?page=1&limit=2`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(2);
+    expect(res.headers["x-total-count"]).toBe("5");
+    expect(res.headers["x-page"]).toBe("1");
+    expect(res.headers["x-limit"]).toBe("2");
+    expect(res.headers["x-total-pages"]).toBe("3");
+  });
+
+  it("returns second page", async () => {
+    const res = await request(app)
+      .get(`/api/v1/tasks/${paginationWsId}/tasks?page=2&limit=2`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(2);
+    expect(res.headers["x-total-count"]).toBe("5");
+  });
+
+  it("returns last page with remaining items", async () => {
+    const res = await request(app)
+      .get(`/api/v1/tasks/${paginationWsId}/tasks?page=3&limit=2`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(1);
+  });
+
+  it("returns empty array for page beyond total", async () => {
+    const res = await request(app)
+      .get(`/api/v1/tasks/${paginationWsId}/tasks?page=99&limit=2`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(0);
+    expect(res.headers["x-total-count"]).toBe("5");
+  });
+
+  it("paginates projects", async () => {
+    const res = await request(app)
+      .get(`/api/v1/projects/${paginationWsId}/projects?page=1&limit=1`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBe(1);
+    expect(res.headers["x-total-count"]).toBe("1");
+  });
+
+  it("paginates activities", async () => {
+    const res = await request(app)
+      .get(`/api/v1/activities/${paginationWsId}/activities?page=1&limit=3`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBeLessThanOrEqual(3);
+    expect(res.headers["x-total-count"]).toBeDefined();
+  });
+});
+
 // ────────────── Workspace deletion ──────────────
 describe("Workspace deletion", () => {
   it("non-owner cannot delete workspace", async () => {

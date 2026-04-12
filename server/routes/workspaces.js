@@ -15,6 +15,7 @@ import {
 } from "../middleware/validation.js";
 import { logActivity, uid } from "../utils/workspace.js";
 import { syncTaskNotifications } from "../utils/notifications.js";
+import { parsePagination, paginatedResponse } from "../middleware/pagination.js";
 
 const router = Router();
 
@@ -134,24 +135,37 @@ const listWorkspaceMembers = (workspaceId) =>
   `).all(workspaceId);
 
 router.get("/discover", requireAuth, route((req, res) => {
-  const workspaces = db.prepare(`
-    SELECT
-      w.id,
-      w.name,
-      w.description,
-      (
-        SELECT COUNT(*)
-        FROM workspace_members
-        WHERE workspace_id = w.id
-      ) AS member_count
+  const { paginate, page, limit, offset } = parsePagination(req.query);
+
+  const baseWhere = `
     FROM workspaces w
     WHERE w.id NOT IN (
       SELECT workspace_id FROM workspace_members WHERE user_id = ?
     )
       AND w.archived_at IS NULL
+  `;
+
+  if (!paginate) {
+    const workspaces = db.prepare(`
+      SELECT w.id, w.name, w.description,
+        (SELECT COUNT(*) FROM workspace_members WHERE workspace_id = w.id) AS member_count
+      ${baseWhere}
+      ORDER BY w.created_at DESC
+    `).all(req.userId);
+    return res.json(workspaces);
+  }
+
+  const total = db.prepare(`SELECT COUNT(*) AS count ${baseWhere}`).get(req.userId).count;
+
+  const rows = db.prepare(`
+    SELECT w.id, w.name, w.description,
+      (SELECT COUNT(*) FROM workspace_members WHERE workspace_id = w.id) AS member_count
+    ${baseWhere}
     ORDER BY w.created_at DESC
-  `).all(req.userId);
-  res.json(workspaces);
+    LIMIT ? OFFSET ?
+  `).all(req.userId, limit, offset);
+
+  paginatedResponse(res, { rows, total, page, limit });
 }));
 
 router.get("/", requireAuth, route((req, res) => {

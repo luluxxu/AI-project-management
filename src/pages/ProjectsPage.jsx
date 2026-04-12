@@ -308,12 +308,14 @@ export default function ProjectsPage({ store }) {
         }
       >
         <SimpleTable
+          sortable
           columns={[
             { key: "name", label: "Name" },
             { key: "team", label: "Team", render: () => teamName },
             {
               key: "status",
               label: "Status",
+              sortValue: (row) => ({ "Planning": 0, "Active": 1, "On Hold": 2, "Completed": 3, "Cancelled": 4 }[row.status] ?? 5),
               render: (row) => (
                 <select value={row.status} onChange={(e) => handleProjectStatusChange(row, e.target.value)}>
                   <option>Planning</option>
@@ -324,7 +326,11 @@ export default function ProjectsPage({ store }) {
                 </select>
               ),
             },
-            { key: "priority", label: "Priority" },
+            {
+              key: "priority",
+              label: "Priority",
+              sortValue: (row) => ({ "High": 0, "Medium": 1, "Low": 2 }[row.priority] ?? 3),
+            },
             { key: "endDate", label: "Deadline" },
             {
               key: "actions",
@@ -345,7 +351,7 @@ export default function ProjectsPage({ store }) {
 
       <SectionCard
         title="Tasks"
-        subtitle={showArchived ? "Archived tasks can be restored here" : "Filter by project and manage task state"}
+        subtitle={showArchived ? "Archived tasks can be restored here" : "Filter by project and manage task state — click column headers to sort"}
         action={
           <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
             <option value="all">All projects</option>
@@ -356,12 +362,14 @@ export default function ProjectsPage({ store }) {
         }
       >
         <SimpleTable
+          sortable
           columns={[
             { key: "title", label: "Task" },
             { key: "team", label: "Team", render: () => teamName },
             {
               key: "status",
               label: "Status",
+              sortValue: (row) => ({ "Todo": 0, "In Progress": 1, "Done": 2 }[row.status] ?? 3),
               render: (row) => (
                 <select value={row.status} onChange={(e) => handleTaskStatusChange(row, e.target.value)}>
                   <option>Todo</option>
@@ -370,11 +378,16 @@ export default function ProjectsPage({ store }) {
                 </select>
               ),
             },
-            { key: "priority", label: "Priority" },
+            {
+              key: "priority",
+              label: "Priority",
+              sortValue: (row) => ({ "High": 0, "Medium": 1, "Low": 2 }[row.priority] ?? 3),
+            },
             { key: "dueDate", label: "Due" },
             {
               key: "assigneeId",
               label: "Assignee",
+              sortValue: (row) => store.scopedMembers.find((member) => (member.userId || member.id) === row.assigneeId)?.name || "\uffff",
               render: (row) => store.scopedMembers.find((member) => (member.userId || member.id) === row.assigneeId)?.name || "Unassigned",
             },
             {

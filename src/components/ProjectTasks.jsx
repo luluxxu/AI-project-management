@@ -18,6 +18,9 @@ const priorityTexts = {
     High: { background: "bg-emerald-100 dark:bg-emerald-950", prioritycolor: "text-emerald-600 dark:text-emerald-400" },
 };
 
+const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
+const STATUS_ORDER = { "Todo": 0, "In Progress": 1, "Done": 2 };
+
 const ProjectTasks = ({ tasks, store }) => {
     const { confirm } = useConfirmDialog();
     const [selectedTasks, setSelectedTasks] = useState([]);
@@ -29,13 +32,16 @@ const ProjectTasks = ({ tasks, store }) => {
         assignee: "",
     });
 
+    const [sortField, setSortField] = useState("");
+    const [sortDir, setSortDir] = useState("asc");
+
     const assigneeList = useMemo(
         () => Array.from(new Set(tasks.map((t) => t.assignee?.name).filter(Boolean))),
         [tasks]
     );
 
     const filteredTasks = useMemo(() => {
-        return tasks.filter((task) => {
+        const filtered = tasks.filter((task) => {
             const { status, type, priority, assignee } = filters;
             return (
                 (!status || task.status === status) &&
@@ -44,7 +50,50 @@ const ProjectTasks = ({ tasks, store }) => {
                 (!assignee || task.assignee?.name === assignee)
             );
         });
-    }, [filters, tasks]);
+
+        if (!sortField) return filtered;
+
+        return [...filtered].sort((a, b) => {
+            let cmp = 0;
+            switch (sortField) {
+                case "priority":
+                    cmp = (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3);
+                    break;
+                case "status":
+                    cmp = (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
+                    break;
+                case "dueDate":
+                    cmp = (a.dueDate || "9999").localeCompare(b.dueDate || "9999");
+                    break;
+                case "assignee": {
+                    const nameA = a.assignee?.name || "\uffff";
+                    const nameB = b.assignee?.name || "\uffff";
+                    cmp = nameA.localeCompare(nameB);
+                    break;
+                }
+                case "title":
+                    cmp = (a.title || "").localeCompare(b.title || "");
+                    break;
+                default:
+                    break;
+            }
+            return sortDir === "desc" ? -cmp : cmp;
+        });
+    }, [filters, tasks, sortField, sortDir]);
+
+    const toggleSort = (field) => {
+        if (sortField === field) {
+            setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setSortField(field);
+            setSortDir("asc");
+        }
+    };
+
+    const sortIndicator = (field) => {
+        if (sortField !== field) return "";
+        return sortDir === "asc" ? " \u25B2" : " \u25BC";
+    };
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
@@ -151,11 +200,11 @@ const ProjectTasks = ({ tasks, store }) => {
                                     <th className="pl-2 pr-1">
                                         <input onChange={() => selectedTasks.length > 1 ? setSelectedTasks([]) : setSelectedTasks(tasks.map((t) => t.id))} checked={selectedTasks.length === tasks.length} type="checkbox" className="size-3 accent-zinc-600 dark:accent-zinc-500" />
                                     </th>
-                                    <th className="px-4 pl-0 py-3">Title</th>
-                                    <th className="px-4 py-3">Priority</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3">Assignee</th>
-                                    <th className="px-4 py-3">Due Date</th>
+                                    <th className="px-4 pl-0 py-3 cursor-pointer select-none hover:text-zinc-800 dark:hover:text-zinc-200" onClick={() => toggleSort("title")}>Title{sortIndicator("title")}</th>
+                                    <th className="px-4 py-3 cursor-pointer select-none hover:text-zinc-800 dark:hover:text-zinc-200" onClick={() => toggleSort("priority")}>Priority{sortIndicator("priority")}</th>
+                                    <th className="px-4 py-3 cursor-pointer select-none hover:text-zinc-800 dark:hover:text-zinc-200" onClick={() => toggleSort("status")}>Status{sortIndicator("status")}</th>
+                                    <th className="px-4 py-3 cursor-pointer select-none hover:text-zinc-800 dark:hover:text-zinc-200" onClick={() => toggleSort("assignee")}>Assignee{sortIndicator("assignee")}</th>
+                                    <th className="px-4 py-3 cursor-pointer select-none hover:text-zinc-800 dark:hover:text-zinc-200" onClick={() => toggleSort("dueDate")}>Due Date{sortIndicator("dueDate")}</th>
                                 </tr>
                             </thead>
                             <tbody>

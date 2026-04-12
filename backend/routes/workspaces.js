@@ -19,12 +19,12 @@ import { parsePagination, paginatedResponse } from "../middleware/pagination.js"
 
 const router = Router();
 
-const createWorkspaceTx = db.transaction((name, description, userId) => {
+const createWorkspaceTx = db.transaction((name, description, isPublic, userId) => {
   const id = uid("ws-");
   const now = new Date().toISOString();
 
-  db.prepare("INSERT INTO workspaces (id, name, description, created_at, owner_id) VALUES (?, ?, ?, ?, ?)")
-    .run(id, name, description, now, userId);
+  db.prepare("INSERT INTO workspaces (id, name, description, created_at, owner_id, is_public) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(id, name, description, now, userId, isPublic);
 
   db.prepare("INSERT OR IGNORE INTO workspace_members (id, workspace_id, user_id, role, joined_at) VALUES (?, ?, ?, 'Owner', ?)")
     .run(uid("wm-"), id, userId, now);
@@ -35,6 +35,7 @@ const createWorkspaceTx = db.transaction((name, description, userId) => {
     id,
     name,
     description,
+    isPublic,
     createdAt: now,
     ownerId: userId,
     my_role: "Owner",
@@ -143,6 +144,7 @@ router.get("/discover", requireAuth, route((req, res) => {
       SELECT workspace_id FROM workspace_members WHERE user_id = ?
     )
       AND w.archived_at IS NULL
+      AND w.is_public = 1
   `;
 
   if (!paginate) {
@@ -195,10 +197,27 @@ router.get("/", requireAuth, route((req, res) => {
 }));
 
 router.post("/", requireAuth, route((req, res) => {
-  const { name, description = "" } = validateWorkspacePayload(req.body);
+  const { name, description = "", isPublic = 0 } = validateWorkspacePayload(req.body);
 
-  const workspace = createWorkspaceTx(name, description, req.userId);
+  const workspace = createWorkspaceTx(name, description, isPublic, req.userId);
   res.status(201).json(workspace);
+}));
+
+router.patch("/:id", requireAuth, route((req, res) => {
+  const workspace = db.prepare("SELECT id, owner_id FROM workspaces WHERE id = ?").get(req.params.id);
+  if (!workspace) return res.status(404).json({ error: "Workspace not found" });
+
+  const membership = getWorkspaceMembership(req.params.id, req.userId);
+  if (req.userRole !== "Admin" && (!membership || !["Owner", "Admin"].includes(membership.role))) {
+    return res.status(403).json({ error: "Only workspace Owner or Admin can update" });
+  }
+
+  const payload = validateWorkspacePayload(req.body);
+  db.prepare("UPDATE workspaces SET name = ?, description = ?, is_public = ? WHERE id = ?")
+    .run(payload.name, payload.description, payload.isPublic, req.params.id);
+
+  const updated = db.prepare("SELECT * FROM workspaces WHERE id = ?").get(req.params.id);
+  res.json(updated);
 }));
 
 router.delete("/:id", requireAuth, route((req, res) => {

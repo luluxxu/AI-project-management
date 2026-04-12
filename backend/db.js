@@ -383,6 +383,15 @@ const migrations = [
       }
     },
   },
+  {
+    version: 8,
+    name: "add_workspace_is_public",
+    up: () => {
+      if (!columnExists("workspaces", "is_public")) {
+        db.exec("ALTER TABLE workspaces ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0");
+      }
+    },
+  },
 ];
 
 function applyMigrations() {

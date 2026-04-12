@@ -158,19 +158,35 @@ export function useProjectStore() {
     setTeamInvitations([]);
   };
 
-  const createWorkspace = async () => {
-    const name = promptValue("Workspace name:", "New Workspace");
-    if (!name) return;
+  const createWorkspace = async (payload = {}) => {
+    // Support both old prompt-style (no args) and new dialog-style (with payload)
+    let name = payload.name;
+    if (!name) {
+      name = promptValue("Workspace name:", "New Workspace");
+      if (!name) return;
+    }
 
     setError(null);
     const workspace = norm(
       await apiFetch("/workspaces", {
         method: "POST",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, description: payload.description || "", isPublic: payload.isPublic || false }),
       })
     );
     setWorkspaces((prev) => [...prev, workspace]);
     setActiveWorkspace(workspace.id);
+  };
+
+  const updateWorkspace = async (workspaceId, patch) => {
+    const current = workspaces.find((w) => w.id === workspaceId);
+    if (!current) return;
+    const updated = norm(
+      await apiFetch(`/workspaces/${workspaceId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: current.name, description: current.description || "", ...patch }),
+      })
+    );
+    setWorkspaces((prev) => prev.map((w) => (w.id === workspaceId ? { ...w, ...updated } : w)));
   };
 
   const addProject = async (project) => {
@@ -421,6 +437,7 @@ export function useProjectStore() {
     error,
     setActiveWorkspace,
     createWorkspace,
+    updateWorkspace,
     addProject,
     updateProject,
     deleteProject,

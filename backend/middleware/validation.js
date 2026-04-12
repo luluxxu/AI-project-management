@@ -130,6 +130,7 @@ export function validateWorkspacePayload(body) {
   return {
     name: asTrimmedString(body.name, "name", { required: true, max: 120 }),
     description: asTrimmedString(body.description, "description", { max: 1000 }) ?? "",
+    isPublic: body.isPublic ? 1 : 0,
   };
 }
 

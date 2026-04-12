@@ -24,6 +24,7 @@ const links = [
   ["/team", "Team"],
   ["/ai", "AI Helper"],
   ["/activity", "Activity"],
+  ["/discover", "Discover"],
 ];
 
 const adminLinks = [

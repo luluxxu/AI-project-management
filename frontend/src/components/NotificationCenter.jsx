@@ -32,7 +32,7 @@ export default function NotificationCenter({ notifications, unreadCount, onMarkR
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+0.75rem)] z-20 w-[min(92vw,26rem)] overflow-hidden rounded-3xl border border-[#e6d79e] bg-[#fff9ea] shadow-2xl">
+        <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(92vw,26rem)] overflow-hidden rounded-3xl border border-[#e6d79e] bg-[#fff9ea] shadow-2xl">
           <div className="flex items-center justify-between border-b border-[#f0e7c3] px-5 py-4">
             <div>
               <h2 className="m-0 text-base font-bold text-[#1B0C0C]">Task reminders</h2>

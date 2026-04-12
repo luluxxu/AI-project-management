@@ -162,7 +162,7 @@ function AuthenticatedApp() {
 
       <main className="grid gap-5 overflow-auto p-6 max-md:p-4">
         {store.data.workspaces.length > 0 && (
-          <header className="flex items-center justify-between gap-4 rounded-[28px] border border-white/50 bg-[#fff9ea]/84 px-6 py-5 shadow-[0_18px_40px_rgba(76,92,45,0.12)] backdrop-blur-md max-md:flex-col max-md:items-start">
+          <header className="relative z-30 flex items-center justify-between gap-4 rounded-[28px] border border-white/50 bg-[#fff9ea]/84 px-6 py-5 shadow-[0_18px_40px_rgba(76,92,45,0.12)] backdrop-blur-md max-md:flex-col max-md:items-start">
             <div className="min-w-0">
               <h1 className="m-0 text-[2rem] font-semibold tracking-tight text-[#1B0C0C]">{store.activeWorkspace?.name || "Workspace"}</h1>
               <p className="mt-1 text-[#5c543e]">

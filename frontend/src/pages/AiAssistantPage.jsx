@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import SectionCard from "../components/SectionCard";
 import SimpleTable from "../components/SimpleTable";
 import AiChatPanel from "../components/AiChatPanel";
 import {
@@ -9,35 +8,25 @@ import {
   generateDailyPlanWithAi,
 } from "../utils/claudeApi";
 import { extractTasksFromText, generateDailyPlan } from "../utils/aiHelpers";
+import { SparklesIcon, FileTextIcon, CalendarClockIcon, FolderKanbanIcon, MessageSquareIcon, DownloadIcon, PlayIcon, CheckCircle2Icon, AlertCircleIcon } from "lucide-react";
 
 function parseBusyBlocks(raw, date) {
-  return raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [start, end] = line.split("-").map((x) => x.trim());
-      if (!start || !end) return null;
-      return {
-        start: `${date}T${start}:00`,
-        end: `${date}T${end}:00`,
-      };
-    })
-    .filter(Boolean);
+  return raw.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
+    const [start, end] = line.split("-").map((x) => x.trim());
+    if (!start || !end) return null;
+    return { start: `${date}T${start}:00`, end: `${date}T${end}:00` };
+  }).filter(Boolean);
 }
 
+const priorityBadge = { High: "bg-rose-50 text-rose-700 border-rose-200", Medium: "bg-amber-50 text-amber-700 border-amber-200", Low: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+
 export default function AiAssistantPage({ store }) {
-  const [aiStatus, setAiStatus] = useState({
-    configured: false,
-    configuredProviders: [],
-    defaultProvider: null,
-  });
+  const [aiStatus, setAiStatus] = useState({ configured: false, configuredProviders: [], defaultProvider: null });
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [provider, setProvider] = useState("auto");
+  const [activeTab, setActiveTab] = useState("extract");
 
-  const [text, setText] = useState(
-    "Discuss onboarding flow; implement signup API ASAP; prepare unit tests; design error states for failed login"
-  );
+  const [text, setText] = useState("");
   const [sourceType, setSourceType] = useState("notes");
   const [selectedProjectId, setSelectedProjectId] = useState(store.scopedProjects[0]?.id || "");
   const [drafts, setDrafts] = useState([]);
@@ -45,7 +34,7 @@ export default function AiAssistantPage({ store }) {
   const [planDate, setPlanDate] = useState(new Date().toISOString().slice(0, 10));
   const [workStart, setWorkStart] = useState("09:00");
   const [workEnd, setWorkEnd] = useState("17:00");
-  const [busyText, setBusyText] = useState("12:00-13:00\n15:00-15:30");
+  const [busyText, setBusyText] = useState("");
   const [plan, setPlan] = useState({ orderedTasks: [], timeBlocks: [] });
 
   const [planProjectName, setPlanProjectName] = useState("");
@@ -61,308 +50,266 @@ export default function AiAssistantPage({ store }) {
 
   useEffect(() => {
     checkAiStatus()
-      .then((status) => {
-        setAiStatus(status);
-        if (status.defaultProvider) setProvider(status.defaultProvider);
-      })
+      .then((s) => { setAiStatus(s); if (s.defaultProvider) setProvider(s.defaultProvider); })
       .catch(() => setAiStatus({ configured: false, configuredProviders: [], defaultProvider: null }))
       .finally(() => setCheckingStatus(false));
   }, []);
 
   const providerOptions = useMemo(() => {
     const available = aiStatus.configuredProviders || [];
-    return [
-      { value: "auto", label: "Auto" },
-      ...(available.includes("chatgpt") ? [{ value: "chatgpt", label: "ChatGPT" }] : []),
-    ];
+    return [{ value: "auto", label: "Auto" }, ...(available.includes("chatgpt") ? [{ value: "chatgpt", label: "ChatGPT" }] : [])];
   }, [aiStatus.configuredProviders]);
 
   const handleExtract = useCallback(async () => {
     if (!text.trim()) return;
-
-    setLoading((prev) => ({ ...prev, extract: true }));
-    setError((prev) => ({ ...prev, extract: null }));
+    setLoading((p) => ({ ...p, extract: true })); setError((p) => ({ ...p, extract: null }));
     try {
-      if (!aiConfigured) {
-        setDrafts(extractTasksFromText(text));
-      } else {
-        const result = await extractTasksWithAi(text, provider, sourceType);
-        setDrafts(result?.length ? result : extractTasksFromText(text));
-      }
-    } catch (e) {
-      setError((prev) => ({ ...prev, extract: e.message || "Task extraction failed" }));
-      setDrafts(extractTasksFromText(text));
-    } finally {
-      setLoading((prev) => ({ ...prev, extract: false }));
-    }
+      if (!aiConfigured) { setDrafts(extractTasksFromText(text)); }
+      else { const r = await extractTasksWithAi(text, provider, sourceType); setDrafts(r?.length ? r : extractTasksFromText(text)); }
+    } catch (e) { setError((p) => ({ ...p, extract: e.message || "Failed" })); setDrafts(extractTasksFromText(text)); }
+    finally { setLoading((p) => ({ ...p, extract: false })); }
   }, [text, aiConfigured, provider, sourceType]);
 
   const handleGeneratePlan = useCallback(async () => {
-    setLoading((prev) => ({ ...prev, plan: true }));
-    setError((prev) => ({ ...prev, plan: null }));
-
+    setLoading((p) => ({ ...p, plan: true })); setError((p) => ({ ...p, plan: null }));
     try {
-      if (!aiConfigured) {
-        setPlan({ orderedTasks: generateDailyPlan(store.scopedTasks), timeBlocks: [] });
-      } else {
-        const busyBlocks = parseBusyBlocks(busyText, planDate);
-        const result = await generateDailyPlanWithAi({
-          provider,
-          tasks: store.scopedTasks,
-          projects: store.scopedProjects,
-          members: store.scopedMembers,
-          date: planDate,
-          workHours: { start: workStart, end: workEnd },
-          busyBlocks,
-        });
-        setPlan({
-          orderedTasks: result?.orderedTasks || [],
-          timeBlocks: result?.timeBlocks || [],
-        });
+      if (!aiConfigured) { setPlan({ orderedTasks: generateDailyPlan(store.scopedTasks), timeBlocks: [] }); }
+      else {
+        const r = await generateDailyPlanWithAi({ provider, tasks: store.scopedTasks, projects: store.scopedProjects, members: store.scopedMembers, date: planDate, workHours: { start: workStart, end: workEnd }, busyBlocks: parseBusyBlocks(busyText, planDate) });
+        setPlan({ orderedTasks: r?.orderedTasks || [], timeBlocks: r?.timeBlocks || [] });
       }
-    } catch (e) {
-      setError((prev) => ({ ...prev, plan: e.message || "Plan generation failed" }));
-      setPlan({ orderedTasks: generateDailyPlan(store.scopedTasks), timeBlocks: [] });
-    } finally {
-      setLoading((prev) => ({ ...prev, plan: false }));
-    }
+    } catch (e) { setError((p) => ({ ...p, plan: e.message || "Failed" })); setPlan({ orderedTasks: generateDailyPlan(store.scopedTasks), timeBlocks: [] }); }
+    finally { setLoading((p) => ({ ...p, plan: false })); }
   }, [aiConfigured, busyText, planDate, provider, store.scopedMembers, store.scopedProjects, store.scopedTasks, workEnd, workStart]);
 
   const handleApplyPlan = useCallback(async () => {
     if (!plan.timeBlocks.length) return;
-
-    setLoading((prev) => ({ ...prev, applyPlan: true }));
-    setError((prev) => ({ ...prev, applyPlan: null }));
-
-    try {
-      await Promise.all(
-        plan.timeBlocks.map((block) =>
-          store.updateTask(block.taskId, {
-            plannedStart: block.start,
-            plannedEnd: block.end,
-          })
-        )
-      );
-    } catch (e) {
-      setError((prev) => ({ ...prev, applyPlan: e.message || "Failed to apply schedule to tasks" }));
-    } finally {
-      setLoading((prev) => ({ ...prev, applyPlan: false }));
-    }
+    setLoading((p) => ({ ...p, applyPlan: true })); setError((p) => ({ ...p, applyPlan: null }));
+    try { await Promise.all(plan.timeBlocks.map((b) => store.updateTask(b.taskId, { plannedStart: b.start, plannedEnd: b.end }))); }
+    catch (e) { setError((p) => ({ ...p, applyPlan: e.message || "Failed" })); }
+    finally { setLoading((p) => ({ ...p, applyPlan: false })); }
   }, [plan.timeBlocks, store]);
 
   const handleGenerateProjectPlan = useCallback(async () => {
     if (!planProjectName.trim()) return;
-    if (!aiConfigured) {
-      setError((prev) => ({
-        ...prev,
-        projectPlan: "Project planning requires OpenAI key on server.",
-      }));
-      return;
-    }
-
-    setLoading((prev) => ({ ...prev, projectPlan: true }));
-    setError((prev) => ({ ...prev, projectPlan: null }));
+    if (!aiConfigured) { setError((p) => ({ ...p, projectPlan: "Requires OpenAI key on server." })); return; }
+    setLoading((p) => ({ ...p, projectPlan: true })); setError((p) => ({ ...p, projectPlan: null }));
     try {
-      const result = await generateProjectPlan({
-        provider,
-        projectName: planProjectName,
-        description: planDescription,
-        startDate: planStartDate,
-        endDate: planEndDate,
-      });
-      setProjectPlan({
-        milestones: result?.milestones || [],
-        tasks: result?.tasks || [],
-      });
-    } catch (e) {
-      setError((prev) => ({ ...prev, projectPlan: e.message || "Project plan generation failed" }));
-    } finally {
-      setLoading((prev) => ({ ...prev, projectPlan: false }));
-    }
+      const r = await generateProjectPlan({ provider, projectName: planProjectName, description: planDescription, startDate: planStartDate, endDate: planEndDate });
+      setProjectPlan({ milestones: r?.milestones || [], tasks: r?.tasks || [] });
+    } catch (e) { setError((p) => ({ ...p, projectPlan: e.message || "Failed" })); }
+    finally { setLoading((p) => ({ ...p, projectPlan: false })); }
   }, [aiConfigured, planProjectName, planDescription, planStartDate, planEndDate, provider]);
 
-  const statusLabel = checkingStatus
-    ? "Checking AI providers..."
-    : aiConfigured
-    ? `Connected: ${(aiStatus.configuredProviders || []).join(" + ")}`
-    : "Heuristic mode (no ChatGPT/Gemini key configured)";
+  const inputClass = "w-full rounded-lg border border-[#ddd5be] bg-white px-3 py-2 text-sm text-[#1B0C0C] placeholder:text-[#b5a882] outline-none transition focus:border-[#4C5C2D] focus:ring-1 focus:ring-[#4C5C2D]/20";
+
+  const tabs = [
+    { id: "extract", label: "Extract Tasks", icon: FileTextIcon },
+    { id: "daily", label: "Daily Plan", icon: CalendarClockIcon },
+    { id: "project", label: "Project Planner", icon: FolderKanbanIcon },
+    { id: "chat", label: "Chat", icon: MessageSquareIcon },
+  ];
 
   return (
-    <div className="grid gap-4">
-      <SectionCard
-        title="AI Service Status"
-        subtitle={
-          <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${aiConfigured ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-500"}`}>
-            {statusLabel}
+    <div className="grid gap-3">
+      {/* Status bar */}
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/82 px-4 py-3 shadow-[0_4px_16px_rgba(148,163,184,0.08)] backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <SparklesIcon className={`size-4 ${aiConfigured ? "text-[#4C5C2D]" : "text-[#8a7d5e]"}`} />
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${aiConfigured ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+            {checkingStatus ? "Checking..." : aiConfigured ? "AI Connected" : "Heuristic Mode"}
           </span>
-        }
-      >
-        <div className="grid gap-3">
-          <label className="text-sm text-slate-600">Model Provider</label>
-          <select value={provider} onChange={(e) => setProvider(e.target.value)} style={{ maxWidth: 280 }}>
-            {providerOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          {!aiConfigured && !checkingStatus && (
-            <p className="text-slate-500" style={{ fontSize: "0.85rem" }}>
-              Set <code>OPENAI_API_KEY</code> in server <code>.env</code> and restart the server.
-            </p>
+          {aiConfigured && (
+            <span className="text-xs text-[#8a7d5e]">{(aiStatus.configuredProviders || []).join(", ")}</span>
           )}
         </div>
-      </SectionCard>
+        <select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded-lg border border-[#ddd5be] bg-white px-2.5 py-1 text-xs text-[#6c6346] outline-none cursor-pointer">
+          {providerOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
 
-      <div className="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
-        <SectionCard title="Task Extraction" subtitle="From notes or email text">
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-lg border border-[#e0d5b8] bg-[#faf5e4] p-0.5">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition flex-1 justify-center ${activeTab === tab.id ? "bg-[#4C5C2D] text-[#fff8dd] shadow-sm" : "text-[#6c6346] hover:text-[#4C5C2D] hover:bg-[#f5edd4]"}`}
+          >
+            <tab.icon className="size-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === "extract" && (
+        <section className="rounded-2xl border border-white/70 bg-white/82 p-4 shadow-[0_8px_24px_rgba(148,163,184,0.1)] backdrop-blur-md">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Extract Tasks from Text</h2>
+          <p className="mb-3 text-sm text-[#8a7d5e]">Paste meeting notes, emails, or requirements — AI extracts actionable tasks.</p>
           <div className="grid gap-3">
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} style={{ maxWidth: 220 }}>
+            <div className="flex gap-2 max-md:flex-col">
+              <select className={`${inputClass} max-w-[180px] max-md:max-w-full`} value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
                 <option value="notes">Notes / Requirements</option>
                 <option value="email">Email Thread</option>
               </select>
-            </div>
-            <textarea rows="5" value={text} onChange={(e) => setText(e.target.value)} />
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <select
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                style={{ flex: 1 }}
-              >
-                <option value="">Select project</option>
-                {store.scopedProjects.map((project) => (
-                  <option key={project.id} value={project.id}>{project.name}</option>
-                ))}
+              <select className={`${inputClass} flex-1`} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+                <option value="">Import to project...</option>
+                {store.scopedProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <button className="bg-slate-200 text-slate-900 rounded-xl px-4 py-2 hover:bg-slate-300 transition" onClick={handleExtract} disabled={loading.extract}>
+            </div>
+            <textarea className={`${inputClass} min-h-[100px]`} rows="4" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste your text here..." />
+            <div className="flex gap-2 justify-end">
+              <button onClick={handleExtract} disabled={loading.extract || !text.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#4C5C2D] px-4 py-2 text-sm font-medium text-[#fff8dd] transition hover:bg-[#3a4822] disabled:opacity-50">
+                <SparklesIcon className="size-3.5" />
                 {loading.extract ? "Analyzing..." : "Extract Tasks"}
               </button>
-              <button
-                className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition"
-                disabled={!selectedProjectId || !drafts.length}
-                onClick={() => {
-                  if (!selectedProjectId || !drafts.length) return;
-                  store.importDraftTasks(drafts, selectedProjectId);
-                  setDrafts([]);
-                }}
-              >
-                Import Tasks
-              </button>
+              {drafts.length > 0 && (
+                <button
+                  onClick={() => { if (!selectedProjectId || !drafts.length) return; store.importDraftTasks(drafts, selectedProjectId); setDrafts([]); }}
+                  disabled={!selectedProjectId}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#4C5C2D] px-4 py-2 text-sm font-medium text-[#4C5C2D] transition hover:bg-[#faf5e4] disabled:opacity-50"
+                >
+                  <DownloadIcon className="size-3.5" />
+                  Import {drafts.length} Task{drafts.length !== 1 ? "s" : ""}
+                </button>
+              )}
             </div>
           </div>
-          {error.extract && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.extract}</p>}
-          <SimpleTable
-            columns={[
-              { key: "title", label: "Task Title" },
-              { key: "priority", label: "Priority" },
-              { key: "effort", label: "Est. Hours" },
-            ]}
-            rows={drafts}
-            emptyLabel="Paste notes/email text and click Extract Tasks."
-          />
-        </SectionCard>
-
-        <SectionCard title="Daily Plan + Time Blocks" subtitle="Calendar-aware planning">
-          <div className="grid gap-3" style={{ marginBottom: "1rem" }}>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <input type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
-              <input type="time" value={workStart} onChange={(e) => setWorkStart(e.target.value)} />
-              <input type="time" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} />
+          {error.extract && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"><AlertCircleIcon className="inline size-3.5 mr-1" />{error.extract}</p>}
+          {drafts.length > 0 && (
+            <div className="mt-3">
+              <SimpleTable
+                columns={[
+                  { key: "title", label: "Task" },
+                  { key: "priority", label: "Priority", render: (r) => <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-semibold ${priorityBadge[r.priority] || ""}`}>{r.priority}</span> },
+                  { key: "effort", label: "Hours" },
+                ]}
+                rows={drafts}
+              />
             </div>
-            <textarea
-              rows="3"
-              value={busyText}
-              onChange={(e) => setBusyText(e.target.value)}
-              placeholder={`Busy blocks, one per line:\n10:00-11:00\n14:30-15:00`}
-            />
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <button className="bg-slate-200 text-slate-900 rounded-xl px-4 py-2 hover:bg-slate-300 transition" onClick={handleGeneratePlan} disabled={loading.plan}>
+          )}
+        </section>
+      )}
+
+      {activeTab === "daily" && (
+        <section className="rounded-2xl border border-white/70 bg-white/82 p-4 shadow-[0_8px_24px_rgba(148,163,184,0.1)] backdrop-blur-md">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Daily Plan</h2>
+          <p className="mb-3 text-sm text-[#8a7d5e]">Generate a prioritized task order and time-blocked schedule for your day.</p>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-4 gap-2.5 max-md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[#8a7d5e]">Date</label>
+                <input className={inputClass} type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[#8a7d5e]">Start</label>
+                <input className={inputClass} type="time" value={workStart} onChange={(e) => setWorkStart(e.target.value)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[#8a7d5e]">End</label>
+                <input className={inputClass} type="time" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[#8a7d5e]">Busy blocks</label>
+                <input className={inputClass} value={busyText} onChange={(e) => setBusyText(e.target.value)} placeholder="12:00-13:00, 15:00-15:30" />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={handleGeneratePlan} disabled={loading.plan} className="inline-flex items-center gap-1.5 rounded-lg bg-[#4C5C2D] px-4 py-2 text-sm font-medium text-[#fff8dd] transition hover:bg-[#3a4822] disabled:opacity-50">
+                <PlayIcon className="size-3.5" />
                 {loading.plan ? "Generating..." : "Plan My Day"}
               </button>
-              <button className="bg-blue-600 text-white border-blue-600 rounded-xl px-4 py-2 hover:bg-blue-700 transition" onClick={handleApplyPlan} disabled={loading.applyPlan || !plan.timeBlocks.length}>
-                {loading.applyPlan ? "Applying..." : "Apply Time Blocks to Tasks"}
+              {plan.timeBlocks.length > 0 && (
+                <button onClick={handleApplyPlan} disabled={loading.applyPlan} className="inline-flex items-center gap-1.5 rounded-lg border border-[#4C5C2D] px-4 py-2 text-sm font-medium text-[#4C5C2D] transition hover:bg-[#faf5e4] disabled:opacity-50">
+                  <CheckCircle2Icon className="size-3.5" />
+                  {loading.applyPlan ? "Applying..." : "Apply to Tasks"}
+                </button>
+              )}
+            </div>
+          </div>
+          {error.plan && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"><AlertCircleIcon className="inline size-3.5 mr-1" />{error.plan}</p>}
+          {plan.orderedTasks.length > 0 && (
+            <div className="mt-3 grid gap-3">
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-[#1B0C0C]">Priority Order</h3>
+                <SimpleTable columns={[{ key: "rank", label: "#" }, { key: "title", label: "Task" }, { key: "reason", label: "Reason" }]} rows={plan.orderedTasks} />
+              </div>
+              {plan.timeBlocks.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-[#1B0C0C]">Time Blocks</h3>
+                  <SimpleTable columns={[{ key: "title", label: "Task" }, { key: "start", label: "Start", render: (r) => r.start?.split("T")[1]?.slice(0, 5) || "" }, { key: "end", label: "End", render: (r) => r.end?.split("T")[1]?.slice(0, 5) || "" }, { key: "reason", label: "Reason" }]} rows={plan.timeBlocks} />
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === "project" && (
+        <section className="rounded-2xl border border-white/70 bg-white/82 p-4 shadow-[0_8px_24px_rgba(148,163,184,0.1)] backdrop-blur-md">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Project Planner</h2>
+          <p className="mb-3 text-sm text-[#8a7d5e]">Describe a project and AI will break it into milestones and tasks.</p>
+          <div className="grid gap-3">
+            <input className={inputClass} value={planProjectName} onChange={(e) => setPlanProjectName(e.target.value)} placeholder="Project name" />
+            <textarea className={`${inputClass} min-h-[80px]`} rows="3" value={planDescription} onChange={(e) => setPlanDescription(e.target.value)} placeholder="Goals, scope, key deliverables..." />
+            <div className="grid grid-cols-2 gap-2.5 max-md:grid-cols-1">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[#8a7d5e]">Start</label>
+                <input className={inputClass} type="date" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-[#8a7d5e]">End</label>
+                <input className={inputClass} type="date" value={planEndDate} onChange={(e) => setPlanEndDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button onClick={handleGenerateProjectPlan} disabled={loading.projectPlan || !planProjectName.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#4C5C2D] px-4 py-2 text-sm font-medium text-[#fff8dd] transition hover:bg-[#3a4822] disabled:opacity-50">
+                <SparklesIcon className="size-3.5" />
+                {loading.projectPlan ? "Generating..." : "Generate Plan"}
               </button>
             </div>
           </div>
-          {error.plan && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.plan}</p>}
-          {error.applyPlan && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.applyPlan}</p>}
-          <SimpleTable
-            columns={[
-              { key: "rank", label: "Rank" },
-              { key: "title", label: "Task" },
-              { key: "reason", label: "Reason" },
-            ]}
-            rows={plan.orderedTasks}
-            emptyLabel="Click Plan My Day to generate ordered tasks."
-          />
-          <div className="mt-3" />
-          <SimpleTable
-            columns={[
-              { key: "title", label: "Task" },
-              {
-                key: "start",
-                label: "Start",
-                render: (row) => row.start?.replace("T", " "),
-              },
-              {
-                key: "end",
-                label: "End",
-                render: (row) => row.end?.replace("T", " "),
-              },
-            ]}
-            rows={plan.timeBlocks}
-            emptyLabel="No time blocks yet."
-          />
-        </SectionCard>
-      </div>
+          {error.projectPlan && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"><AlertCircleIcon className="inline size-3.5 mr-1" />{error.projectPlan}</p>}
+          {(projectPlan.milestones.length > 0 || projectPlan.tasks.length > 0) && (
+            <div className="mt-3 grid gap-3">
+              {projectPlan.milestones.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-[#1B0C0C]">Milestones</h3>
+                  <SimpleTable columns={[{ key: "title", label: "Milestone" }, { key: "targetDate", label: "Target" }, { key: "reason", label: "Why" }]} rows={projectPlan.milestones} />
+                </div>
+              )}
+              {projectPlan.tasks.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-[#1B0C0C]">Tasks</h3>
+                  <SimpleTable columns={[
+                    { key: "title", label: "Task" },
+                    { key: "priority", label: "Priority", render: (r) => <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-semibold ${priorityBadge[r.priority] || ""}`}>{r.priority}</span> },
+                    { key: "effort", label: "Hours" },
+                    { key: "dueDate", label: "Due" },
+                    { key: "milestone", label: "Milestone" },
+                  ]} rows={projectPlan.tasks} />
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
-      <SectionCard title="Project Planner" subtitle="AI-generated milestones and task breakdown">
-        <div className="grid gap-3">
-          <input value={planProjectName} onChange={(e) => setPlanProjectName(e.target.value)} placeholder="Project name" />
-          <textarea rows="4" value={planDescription} onChange={(e) => setPlanDescription(e.target.value)} placeholder="Describe the project goals, scope, and key deliverables" />
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-            <label className="text-sm text-slate-500">Start</label>
-            <input type="date" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} />
-            <label className="text-sm text-slate-500">End</label>
-            <input type="date" value={planEndDate} onChange={(e) => setPlanEndDate(e.target.value)} />
-            <button className="bg-slate-200 text-slate-900 rounded-xl px-4 py-2 hover:bg-slate-300 transition" onClick={handleGenerateProjectPlan} disabled={loading.projectPlan}>
-              {loading.projectPlan ? "Generating..." : "Generate Plan"}
-            </button>
-          </div>
-        </div>
-        {error.projectPlan && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.projectPlan}</p>}
-        <div className="mt-3" />
-        <SimpleTable
-          columns={[
-            { key: "title", label: "Milestone" },
-            { key: "targetDate", label: "Target Date" },
-            { key: "reason", label: "Why" },
-          ]}
-          rows={projectPlan.milestones}
-          emptyLabel="Enter a project name and click Generate Plan."
-        />
-        <div className="mt-3" />
-        <SimpleTable
-          columns={[
-            { key: "title", label: "Task" },
-            { key: "priority", label: "Priority" },
-            { key: "effort", label: "Hours" },
-            { key: "dueDate", label: "Due Date" },
-            { key: "milestone", label: "Milestone" },
-          ]}
-          rows={projectPlan.tasks}
-          emptyLabel="Tasks will appear here after generation."
-        />
-      </SectionCard>
-
-      <SectionCard title="AI Chat Assistant" subtitle={aiConfigured ? "Chat with selected provider" : "Configure server AI key to enable"}>
-        {aiConfigured ? (
-          <AiChatPanel store={store} provider={provider} />
-        ) : (
-          <p className="text-slate-400 text-sm py-2">
-            Set <code>OPENAI_API_KEY</code> in server <code>.env</code> to enable chat.
-          </p>
-        )}
-      </SectionCard>
+      {activeTab === "chat" && (
+        <section className="rounded-2xl border border-white/70 bg-white/82 p-4 shadow-[0_8px_24px_rgba(148,163,184,0.1)] backdrop-blur-md">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">AI Chat</h2>
+          <p className="mb-3 text-sm text-[#8a7d5e]">Ask questions about your workspace — AI has context on your projects and tasks.</p>
+          {aiConfigured ? (
+            <AiChatPanel store={store} provider={provider} />
+          ) : (
+            <div className="rounded-xl border border-dashed border-[#d7c89d] bg-[#fffdf4] px-4 py-8 text-center">
+              <SparklesIcon className="mx-auto size-6 text-[#8a7d5e] mb-2" />
+              <p className="text-sm text-[#6c6346]">Set <code className="rounded bg-[#f0e7c3] px-1.5 py-0.5 text-xs">OPENAI_API_KEY</code> in server <code className="rounded bg-[#f0e7c3] px-1.5 py-0.5 text-xs">.env</code> to enable chat.</p>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

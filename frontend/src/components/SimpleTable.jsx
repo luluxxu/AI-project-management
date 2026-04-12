@@ -49,7 +49,7 @@ export default function SimpleTable({ columns, rows, emptyLabel = "No data yet."
             {columns.map((column) => (
               <th
                 key={column.key}
-                className={`border-b border-slate-100 p-3 text-left text-sm uppercase tracking-wide text-slate-500${sortable ? " cursor-pointer select-none hover:text-slate-700" : ""}`}
+                className={`border-b border-slate-100 p-3 text-left text-[0.8rem] uppercase tracking-wide text-slate-500${sortable ? " cursor-pointer select-none hover:text-slate-700" : ""}`}
                 onClick={() => toggleSort(column.key)}
               >
                 {column.label}
@@ -64,7 +64,7 @@ export default function SimpleTable({ columns, rows, emptyLabel = "No data yet."
           {sortedRows.map((row, index) => (
             <tr key={row.id || index} className="transition-colors hover:bg-slate-50/80">
               {columns.map((column) => (
-                <td key={column.key} className="border-b border-slate-100 p-3 text-left">{column.render ? column.render(row) : row[column.key]}</td>
+                <td key={column.key} className="border-b border-slate-100 p-3 text-left text-[0.9rem]">{column.render ? column.render(row) : row[column.key]}</td>
               ))}
             </tr>
           ))}

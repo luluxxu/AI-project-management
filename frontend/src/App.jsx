@@ -84,20 +84,20 @@ function AuthenticatedApp() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-[292px_1fr] bg-[radial-gradient(circle_at_top_left,_rgba(255,251,236,0.98),_rgba(244,237,205,0.92)_38%,_rgba(223,214,176,0.78)_100%)] max-md:grid-cols-1">
-      <aside className="sticky top-4 m-4 flex h-[calc(100vh-2rem)] flex-col gap-5 overflow-hidden rounded-[28px] border border-white/10 bg-[#1B0C0C]/96 p-6 text-slate-50 shadow-[0_24px_60px_rgba(27,12,12,0.34)] max-md:static max-md:m-0 max-md:h-auto max-md:rounded-none max-md:border-0">
+    <div className="grid min-h-screen grid-cols-[340px_1fr] bg-[radial-gradient(circle_at_top_left,_rgba(255,251,236,0.98),_rgba(244,237,205,0.92)_38%,_rgba(223,214,176,0.78)_100%)] max-md:grid-cols-1">
+      <aside className="sticky top-3 m-3 flex h-[calc(100vh-1.5rem)] flex-col gap-4 overflow-y-auto rounded-2xl border border-white/10 bg-[#1B0C0C]/96 p-5 text-slate-50 shadow-[0_24px_60px_rgba(27,12,12,0.34)] max-md:static max-md:m-0 max-md:h-auto max-md:rounded-none max-md:border-0">
         <div>
-          <div className="text-2xl font-extrabold tracking-tight">TaskPilot AI</div>
-          <p className="mt-1 text-sm text-[#d8cfbb]">Project management platform</p>
+          <div className="text-xl font-extrabold tracking-tight">TaskPilot AI</div>
+          <p className="mt-0.5 text-[0.75rem] text-[#d8cfbb]">Project management platform</p>
         </div>
 
-        <div className="grid gap-3 rounded-3xl border border-[#4C5C2D]/20 bg-[#fff9ea] p-4 text-[#1B0C0C] shadow-[0_18px_40px_rgba(27,12,12,0.14)]">
-          <label className="text-sm font-semibold text-[#4C5C2D]">Workspace</label>
+        <div className="grid gap-2 rounded-xl border border-[#4C5C2D]/20 bg-[#fff9ea] p-3 text-[#1B0C0C]">
+          <label className="text-[0.7rem] font-semibold uppercase tracking-wider text-[#4C5C2D]">Workspace</label>
           {store.data.workspaces.length > 0 ? (
             <select
               value={store.activeWorkspaceId}
               onChange={(e) => store.setActiveWorkspace(e.target.value)}
-              className="border-[#e6d79e] bg-[#fffdf4]"
+              className="w-full border-[#e6d79e] bg-[#fffdf4] rounded-lg px-2.5 py-1.5 text-[0.85rem]"
             >
               {store.data.workspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
@@ -106,21 +106,21 @@ function AuthenticatedApp() {
               ))}
             </select>
           ) : (
-            <p className="text-slate-500 text-sm">No workspaces yet</p>
+            <p className="text-slate-500 text-[0.8rem]">No workspaces yet</p>
           )}
-          <button className="bg-[#4C5C2D] text-[#fff8dd] hover:bg-[#313E17] transition" onClick={store.createWorkspace}>
+          <button className="rounded-lg bg-[#4C5C2D] px-3 py-1.5 text-[0.8rem] font-medium text-[#fff8dd] hover:bg-[#313E17] transition" onClick={store.createWorkspace}>
             + New Workspace
           </button>
         </div>
 
-        <nav className="grid gap-2">
+        <nav className="grid gap-1 flex-1">
           {links.map(([to, label]) => (
             <NavLink
               key={to}
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `px-4 py-3 rounded-2xl text-[#d8cfbb] hover:bg-white/8 hover:text-[#FFDE42] transition duration-200 ${isActive ? " bg-[#FFDE42] text-white shadow-sm" : ""}`
+                `px-3 py-2 rounded-xl text-[0.9rem] text-[#d8cfbb] hover:bg-white/8 hover:text-[#FFDE42] transition duration-200 ${isActive ? " bg-[#FFDE42] text-[#1B0C0C] font-medium shadow-sm" : ""}`
               }
             >
               {label}
@@ -128,7 +128,7 @@ function AuthenticatedApp() {
           ))}
           {isAdmin && (
             <>
-              <div className="mt-4 mb-1 px-4 text-xs font-semibold uppercase tracking-wider text-[#96896f]">
+              <div className="mt-3 mb-0.5 px-3 text-[0.65rem] font-semibold uppercase tracking-wider text-[#96896f]">
                 Admin
               </div>
               {adminLinks.map(([to, label]) => (
@@ -136,7 +136,7 @@ function AuthenticatedApp() {
                   key={to}
                   to={to}
                   className={({ isActive }) =>
-                    `px-4 py-3 rounded-2xl text-[#d8cfbb] hover:bg-white/8 hover:text-[#FFDE42] transition duration-200 ${isActive ? " bg-[#FFDE42] text-white shadow-sm" : ""}`
+                    `px-3 py-2 rounded-xl text-[0.9rem] text-[#d8cfbb] hover:bg-white/8 hover:text-[#FFDE42] transition duration-200 ${isActive ? " bg-[#FFDE42] text-[#1B0C0C] font-medium shadow-sm" : ""}`
                   }
                 >
                   {label}
@@ -147,26 +147,26 @@ function AuthenticatedApp() {
         </nav>
 
         {/* User info + logout at bottom */}
-        <div style={{ marginTop: "auto", paddingTop: "1rem", borderTop: "1px solid rgba(148, 163, 184, 0.2)" }}>
-          <p className="text-[#f5ecd1]" style={{ fontSize: "0.84rem", marginBottom: "0.25rem" }}>
+        <div className="mt-auto pt-3 border-t border-white/10">
+          <p className="text-[0.85rem] text-[#f5ecd1] mb-0.5">
             {user?.name || user?.email}
           </p>
-          <p className="text-[#b9a98e]" style={{ fontSize: "0.74rem", marginBottom: "0.75rem" }}>
+          <p className="text-[0.7rem] text-[#b9a98e] mb-2">
             {user?.role || "Member"}
           </p>
-          <button className="w-full border border-[#4C5C2D]/50 bg-[#313E17] text-[#fff8dd] hover:bg-[#4C5C2D] transition" onClick={logout}>
+          <button className="w-full rounded-lg border border-[#4C5C2D]/50 bg-[#313E17] px-3 py-1.5 text-[0.8rem] text-[#fff8dd] hover:bg-[#4C5C2D] transition" onClick={logout}>
             Log out
           </button>
         </div>
       </aside>
 
-      <main className="grid gap-5 overflow-auto p-6 max-md:p-4">
+      <main className="grid gap-3 overflow-auto p-5 max-md:p-3">
         {store.data.workspaces.length > 0 && (
-          <header className="relative z-30 flex items-center justify-between gap-4 rounded-[28px] border border-white/50 bg-[#fff9ea]/84 px-6 py-5 shadow-[0_18px_40px_rgba(76,92,45,0.12)] backdrop-blur-md max-md:flex-col max-md:items-start">
+          <header className="relative z-30 flex items-center justify-between gap-3 rounded-2xl border border-white/50 bg-[#fff9ea]/84 px-5 py-3 shadow-[0_8px_24px_rgba(76,92,45,0.08)] backdrop-blur-md max-md:flex-col max-md:items-start">
             <div className="min-w-0">
-              <h1 className="m-0 text-[2rem] font-semibold tracking-tight text-[#1B0C0C]">{store.activeWorkspace?.name || "Workspace"}</h1>
-              <p className="mt-1 text-[#5c543e]">
-                Keep projects, tasks, deadlines, and team updates in one place.
+              <h1 className="m-0 text-xl font-semibold tracking-tight text-[#1B0C0C]">{store.activeWorkspace?.name || "Workspace"}</h1>
+              <p className="mt-0.5 text-sm text-[#5c543e]">
+                Projects, tasks, deadlines, and team updates.
               </p>
             </div>
             <NotificationCenter

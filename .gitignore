@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# unneeded files
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+LICENSE
 # Build output
 dist/
 build/

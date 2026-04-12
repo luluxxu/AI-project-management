@@ -32,8 +32,8 @@ export async function checkAiStatus() {
   return apiFetch("/ai/status");
 }
 
-export async function generateCourseSchedule(payload) {
-  return apiFetch("/ai/course-schedule", {
+export async function generateProjectPlan(payload) {
+  return apiFetch("/ai/project-plan", {
     method: "POST",
     body: JSON.stringify(payload),
   });

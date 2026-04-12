@@ -158,27 +158,26 @@ describe("POST /api/v1/ai/chat", () => {
   });
 });
 
-describe("POST /api/v1/ai/course-schedule", () => {
+describe("POST /api/v1/ai/project-plan", () => {
   it("returns 503 when no AI provider configured", async () => {
     const res = await request(app)
-      .post("/api/v1/ai/course-schedule")
+      .post("/api/v1/ai/project-plan")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        courseName: "CS101",
-        assignmentText: "Build a compiler",
+        projectName: "My Project",
+        description: "Build a web app",
         startDate: "2026-04-01",
-        dueDate: "2026-05-01",
+        endDate: "2026-05-01",
       });
 
     expect(res.status).toBe(503);
   });
 
   it("returns 400 when required fields missing (with provider)", async () => {
-    // Without provider this would be 503; test validation anyway
     const res = await request(app)
-      .post("/api/v1/ai/course-schedule")
+      .post("/api/v1/ai/project-plan")
       .set("Authorization", `Bearer ${token}`)
-      .send({ courseName: "CS101" });
+      .send({ description: "something" });
 
     // Either 400 (validation) or 503 (no provider) is acceptable
     expect([400, 503]).toContain(res.status);

@@ -364,8 +364,8 @@ Return valid JSON only.`,
   }
 });
 
-// POST /api/v1/ai/course-schedule
-router.post("/course-schedule", requireAuth, aiLimiter, async (req, res) => {
+// POST /api/v1/ai/project-plan
+router.post("/project-plan", requireAuth, aiLimiter, async (req, res) => {
   const provider = resolveProvider(req.body?.provider);
   if (!provider) {
     return res.status(503).json({
@@ -373,44 +373,78 @@ router.post("/course-schedule", requireAuth, aiLimiter, async (req, res) => {
     });
   }
 
-  const { courseName = "", assignmentText = "", startDate, dueDate } = req.body;
-  if (!assignmentText || !startDate || !dueDate) {
-    return res.status(400).json({ error: "assignmentText, startDate and dueDate are required" });
+  const { projectName = "", description = "", startDate, endDate } = req.body;
+  if (!projectName || !startDate || !endDate) {
+    return res.status(400).json({ error: "projectName, startDate and endDate are required" });
   }
 
   try {
     const raw = await callModel({
       provider,
-      systemPrompt: `You are an academic planning assistant.
-Return ONLY JSON object with fields:
+      systemPrompt: `You are a project planning assistant.
+Given a project name, description, and date range, break it down into milestones and actionable tasks.
+
+Return ONLY a JSON object with this shape:
 {
-  "milestones": [{"title":"...","targetDate":"YYYY-MM-DD","reason":"..."}],
-  "weeklyPlan": [{"week":"Week 1","focus":"...","deliverables":"..."}]
+  "milestones": [
+    {"title":"...","targetDate":"YYYY-MM-DD","reason":"..."}
+  ],
+  "tasks": [
+    {
+      "title":"...",
+      "description":"...",
+      "priority":"High"|"Medium"|"Low",
+      "effort": 1-8,
+      "dueDate":"YYYY-MM-DD",
+      "milestone":"milestone title this task belongs to"
+    }
+  ]
 }
 Rules:
-- Split work from startDate to dueDate.
-- Include research, implementation, review, and buffer.
-- Keep milestones practical and evenly spaced.
+- Generate 3-6 milestones spread evenly from startDate to endDate.
+- Generate 5-15 concrete, actionable tasks tied to milestones.
+- Task titles should be imperative phrases (e.g. "Set up CI pipeline").
+- Include planning, implementation, testing, and review phases.
+- effort is estimated hours (1-8).
+- All dates must fall within startDate and endDate.
 Return strict JSON only.`,
       messages: [
         {
           role: "user",
-          content: JSON.stringify({ courseName, assignmentText, startDate, dueDate }),
+          content: JSON.stringify({ projectName, description, startDate, endDate }),
         },
       ],
       temperature: 0.2,
-      maxTokens: 1400,
+      maxTokens: 1800,
     });
 
     const parsed = safeParseJson(raw);
-    res.json({
-      provider,
-      milestones: Array.isArray(parsed?.milestones) ? parsed.milestones : [],
-      weeklyPlan: Array.isArray(parsed?.weeklyPlan) ? parsed.weeklyPlan : [],
-    });
+
+    const milestones = Array.isArray(parsed?.milestones)
+      ? parsed.milestones.map((m) => ({
+          title: String(m?.title || ""),
+          targetDate: String(m?.targetDate || ""),
+          reason: String(m?.reason || ""),
+        }))
+      : [];
+
+    const tasks = Array.isArray(parsed?.tasks)
+      ? parsed.tasks.map((t, i) => ({
+          id: `draft-${i + 1}`,
+          title: String(t?.title || "").slice(0, 160),
+          description: String(t?.description || ""),
+          priority: ["High", "Medium", "Low"].includes(t?.priority) ? t.priority : "Medium",
+          effort: Number.isFinite(Number(t?.effort)) ? Math.max(1, Math.min(8, Number(t.effort))) : 3,
+          dueDate: String(t?.dueDate || ""),
+          milestone: String(t?.milestone || ""),
+          status: "Todo",
+        }))
+      : [];
+
+    res.json({ provider, milestones, tasks });
   } catch (err) {
-    console.error("AI course-schedule error:", err.message);
-    res.status(500).json({ error: "AI course schedule generation failed" });
+    console.error("AI project-plan error:", err.message);
+    res.status(500).json({ error: "AI project plan generation failed" });
   }
 });
 

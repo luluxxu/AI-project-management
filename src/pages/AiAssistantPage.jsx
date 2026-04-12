@@ -5,7 +5,7 @@ import AiChatPanel from "../components/AiChatPanel";
 import {
   checkAiStatus,
   extractTasksWithAi,
-  generateCourseSchedule,
+  generateProjectPlan,
   generateDailyPlanWithAi,
 } from "../utils/claudeApi";
 import { extractTasksFromText, generateDailyPlan } from "../utils/aiHelpers";
@@ -48,16 +48,14 @@ export default function AiAssistantPage({ store }) {
   const [busyText, setBusyText] = useState("12:00-13:00\n15:00-15:30");
   const [plan, setPlan] = useState({ orderedTasks: [], timeBlocks: [] });
 
-  const [courseName, setCourseName] = useState("CS Assignment");
-  const [assignmentText, setAssignmentText] = useState(
-    "Build a full-stack app with auth, deployment report, and demo video."
-  );
-  const [courseStartDate, setCourseStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const [courseDueDate, setCourseDueDate] = useState(new Date(Date.now() + 21 * 86400000).toISOString().slice(0, 10));
-  const [coursePlan, setCoursePlan] = useState({ milestones: [], weeklyPlan: [] });
+  const [planProjectName, setPlanProjectName] = useState("");
+  const [planDescription, setPlanDescription] = useState("");
+  const [planStartDate, setPlanStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [planEndDate, setPlanEndDate] = useState(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+  const [projectPlan, setProjectPlan] = useState({ milestones: [], tasks: [] });
 
-  const [loading, setLoading] = useState({ extract: false, plan: false, applyPlan: false, course: false });
-  const [error, setError] = useState({ extract: null, plan: null, applyPlan: null, course: null });
+  const [loading, setLoading] = useState({ extract: false, plan: false, applyPlan: false, projectPlan: false });
+  const [error, setError] = useState({ extract: null, plan: null, applyPlan: null, projectPlan: null });
 
   const aiConfigured = aiStatus.configured;
 
@@ -152,36 +150,36 @@ export default function AiAssistantPage({ store }) {
     }
   }, [plan.timeBlocks, store]);
 
-  const handleGenerateCourseSchedule = useCallback(async () => {
-    if (!assignmentText.trim()) return;
+  const handleGenerateProjectPlan = useCallback(async () => {
+    if (!planProjectName.trim()) return;
     if (!aiConfigured) {
       setError((prev) => ({
         ...prev,
-        course: "Course schedule generation requires OpenAI key on server.",
+        projectPlan: "Project planning requires OpenAI key on server.",
       }));
       return;
     }
 
-    setLoading((prev) => ({ ...prev, course: true }));
-    setError((prev) => ({ ...prev, course: null }));
+    setLoading((prev) => ({ ...prev, projectPlan: true }));
+    setError((prev) => ({ ...prev, projectPlan: null }));
     try {
-      const result = await generateCourseSchedule({
+      const result = await generateProjectPlan({
         provider,
-        courseName,
-        assignmentText,
-        startDate: courseStartDate,
-        dueDate: courseDueDate,
+        projectName: planProjectName,
+        description: planDescription,
+        startDate: planStartDate,
+        endDate: planEndDate,
       });
-      setCoursePlan({
+      setProjectPlan({
         milestones: result?.milestones || [],
-        weeklyPlan: result?.weeklyPlan || [],
+        tasks: result?.tasks || [],
       });
     } catch (e) {
-      setError((prev) => ({ ...prev, course: e.message || "Course schedule generation failed" }));
+      setError((prev) => ({ ...prev, projectPlan: e.message || "Project plan generation failed" }));
     } finally {
-      setLoading((prev) => ({ ...prev, course: false }));
+      setLoading((prev) => ({ ...prev, projectPlan: false }));
     }
-  }, [aiConfigured, assignmentText, courseDueDate, courseName, courseStartDate, provider]);
+  }, [aiConfigured, planProjectName, planDescription, planStartDate, planEndDate, provider]);
 
   const statusLabel = checkingStatus
     ? "Checking AI providers..."
@@ -317,19 +315,21 @@ export default function AiAssistantPage({ store }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="Course Assignment Scheduler" subtitle="Milestones + weekly plan">
+      <SectionCard title="Project Planner" subtitle="AI-generated milestones and task breakdown">
         <div className="grid gap-3">
-          <input value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Course or assignment name" />
-          <textarea rows="4" value={assignmentText} onChange={(e) => setAssignmentText(e.target.value)} placeholder="Paste assignment description or syllabus section" />
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <input type="date" value={courseStartDate} onChange={(e) => setCourseStartDate(e.target.value)} />
-            <input type="date" value={courseDueDate} onChange={(e) => setCourseDueDate(e.target.value)} />
-            <button className="bg-slate-200 text-slate-900 rounded-xl px-4 py-2 hover:bg-slate-300 transition" onClick={handleGenerateCourseSchedule} disabled={loading.course}>
-              {loading.course ? "Generating..." : "Generate Course Schedule"}
+          <input value={planProjectName} onChange={(e) => setPlanProjectName(e.target.value)} placeholder="Project name" />
+          <textarea rows="4" value={planDescription} onChange={(e) => setPlanDescription(e.target.value)} placeholder="Describe the project goals, scope, and key deliverables" />
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+            <label className="text-sm text-slate-500">Start</label>
+            <input type="date" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} />
+            <label className="text-sm text-slate-500">End</label>
+            <input type="date" value={planEndDate} onChange={(e) => setPlanEndDate(e.target.value)} />
+            <button className="bg-slate-200 text-slate-900 rounded-xl px-4 py-2 hover:bg-slate-300 transition" onClick={handleGenerateProjectPlan} disabled={loading.projectPlan}>
+              {loading.projectPlan ? "Generating..." : "Generate Plan"}
             </button>
           </div>
         </div>
-        {error.course && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.course}</p>}
+        {error.projectPlan && <p className="my-2 px-3 py-2 rounded-xl bg-red-50 text-red-800 text-sm">{error.projectPlan}</p>}
         <div className="mt-3" />
         <SimpleTable
           columns={[
@@ -337,18 +337,20 @@ export default function AiAssistantPage({ store }) {
             { key: "targetDate", label: "Target Date" },
             { key: "reason", label: "Why" },
           ]}
-          rows={coursePlan.milestones}
-          emptyLabel="Generate a schedule to see milestones."
+          rows={projectPlan.milestones}
+          emptyLabel="Enter a project name and click Generate Plan."
         />
         <div className="mt-3" />
         <SimpleTable
           columns={[
-            { key: "week", label: "Week" },
-            { key: "focus", label: "Focus" },
-            { key: "deliverables", label: "Deliverables" },
+            { key: "title", label: "Task" },
+            { key: "priority", label: "Priority" },
+            { key: "effort", label: "Hours" },
+            { key: "dueDate", label: "Due Date" },
+            { key: "milestone", label: "Milestone" },
           ]}
-          rows={coursePlan.weeklyPlan}
-          emptyLabel="Weekly plan will appear here."
+          rows={projectPlan.tasks}
+          emptyLabel="Tasks will appear here after generation."
         />
       </SectionCard>
 

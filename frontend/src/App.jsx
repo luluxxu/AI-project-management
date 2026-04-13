@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
 import NotificationCenter from "./components/NotificationCenter";
 import CreateWorkspaceDialog from "./components/CreateWorkspaceDialog";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const links = [
   ["/", "Dashboard"],
@@ -200,15 +201,15 @@ function AuthenticatedApp() {
         )}
 
         <Routes>
-          <Route path="/discover" element={<DiscoverPage />} />
-          <Route path="/users" element={<UsersPage />} />
-          {isAdmin && <Route path="/admin" element={<AdminPage store={store} />} />}
-          <Route path="/" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><DashboardPage store={store} /></WsGuard>} />
-          <Route path="/projects" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><ProjectsPage store={store} /></WsGuard>} />
-          <Route path="/calendar" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><CalendarPage store={store} /></WsGuard>} />
-          <Route path="/team" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><TeamPage store={store} /></WsGuard>} />
-          <Route path="/ai" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><AiAssistantPage store={store} /></WsGuard>} />
-          <Route path="/activity" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><ActivityPage store={store} /></WsGuard>} />
+          <Route path="/discover" element={<ErrorBoundary><DiscoverPage /></ErrorBoundary>} />
+          <Route path="/users" element={<ErrorBoundary><UsersPage /></ErrorBoundary>} />
+          {isAdmin && <Route path="/admin" element={<ErrorBoundary><AdminPage store={store} /></ErrorBoundary>} />}
+          <Route path="/" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><ErrorBoundary><DashboardPage store={store} /></ErrorBoundary></WsGuard>} />
+          <Route path="/projects" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><ErrorBoundary><ProjectsPage store={store} /></ErrorBoundary></WsGuard>} />
+          <Route path="/calendar" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><ErrorBoundary><CalendarPage store={store} /></ErrorBoundary></WsGuard>} />
+          <Route path="/team" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><ErrorBoundary><TeamPage store={store} /></ErrorBoundary></WsGuard>} />
+          <Route path="/ai" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><ErrorBoundary><AiAssistantPage store={store} /></ErrorBoundary></WsGuard>} />
+          <Route path="/activity" element={<WsGuard store={store} onCreateWorkspace={() => setShowCreateWs(true)}><ErrorBoundary><ActivityPage store={store} /></ErrorBoundary></WsGuard>} />
         </Routes>
       </main>
     </div>
@@ -217,21 +218,23 @@ function AuthenticatedApp() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ConfirmDialogProvider>
-        <Toaster position="top-right" toastOptions={{ style: { borderRadius: "16px", background: "#0f172a", color: "#f8fafc" } }} />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/*"
-            element={
-              <RequireAuth>
-                <AuthenticatedApp />
-              </RequireAuth>
-            }
-          />
-        </Routes>
-      </ConfirmDialogProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ConfirmDialogProvider>
+          <Toaster position="top-right" toastOptions={{ style: { borderRadius: "16px", background: "#0f172a", color: "#f8fafc" } }} />
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/*"
+              element={
+                <RequireAuth>
+                  <AuthenticatedApp />
+                </RequireAuth>
+              }
+            />
+          </Routes>
+        </ConfirmDialogProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

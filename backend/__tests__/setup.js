@@ -8,6 +8,8 @@ const TEST_DB_PATH = join(__dirname, "..", "test.db");
 // Set env BEFORE any server module is imported
 process.env.DB_PATH = TEST_DB_PATH;
 process.env.NODE_ENV = "test";
+process.env.ADMIN_PASSWORD = "admin123";
+process.env.JWT_SECRET = "test-secret";
 
 export function cleanupTestDb() {
   for (const suffix of ["", "-wal", "-shm"]) {

@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -418,11 +419,17 @@ applyMigrations();
 // Seed default admin user after schema is ready.
 let adminUser = db.prepare("SELECT id FROM users WHERE email = ?").get(ADMIN_EMAIL);
 if (!adminUser) {
-  const hash = bcrypt.hashSync("admin123", 10);
+  const adminPassword = process.env.ADMIN_PASSWORD || randomBytes(16).toString("hex");
+  const hash = bcrypt.hashSync(adminPassword, 10);
   const now = new Date().toISOString();
   db.prepare(
     "INSERT INTO users (id, email, password_hash, name, role, created_at) VALUES (?, ?, ?, ?, ?, ?)"
   ).run("u-admin", ADMIN_EMAIL, hash, "Admin", "Admin", now);
+  if (!process.env.ADMIN_PASSWORD) {
+    console.log(`\n  Admin account created: ${ADMIN_EMAIL}`);
+    console.log(`  Generated password: ${adminPassword}`);
+    console.log("  Set ADMIN_PASSWORD env var to use a fixed password.\n");
+  }
 }
 db.prepare("UPDATE users SET role = 'Admin' WHERE email = ?").run(ADMIN_EMAIL);
 

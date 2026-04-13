@@ -1,7 +1,12 @@
 import jwt from "jsonwebtoken";
+import { randomBytes } from "crypto";
 import db from "../db.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "taskpilot-dev-secret";
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET environment variable is required in production");
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || randomBytes(32).toString("hex");
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization;

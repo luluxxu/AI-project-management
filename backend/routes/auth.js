@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
+import rateLimit from "express-rate-limit";
 import db, { ADMIN_EMAIL } from "../db.js";
 import { requireAuth, JWT_SECRET } from "../middleware/auth.js";
 import { route } from "../middleware/error.js";
@@ -10,7 +11,16 @@ import { validateLoginPayload, validateRegistrationPayload } from "../middleware
 const router = Router();
 const uid = () => randomUUID().slice(0, 8);
 
-router.post("/register", route((req, res) => {
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15,                   // 15 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Please try again later." },
+  skip: () => process.env.NODE_ENV === "test",
+});
+
+router.post("/register", authLimiter, route((req, res) => {
   const { name, email, password } = validateRegistrationPayload(req.body);
 
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
@@ -31,7 +41,7 @@ router.post("/register", route((req, res) => {
   res.status(201).json({ token, user: { id, name, email, role } });
 }));
 
-router.post("/login", route((req, res) => {
+router.post("/login", authLimiter, route((req, res) => {
   const { email, password } = validateLoginPayload(req.body);
 
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);

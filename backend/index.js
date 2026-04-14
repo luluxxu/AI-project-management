@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 import authRoutes       from "./routes/auth.js";
 import workspaceRoutes  from "./routes/workspaces.js";
@@ -18,11 +20,17 @@ import { startEmailCron } from "./utils/emailCron.js";
 
 dotenv.config();
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Production: serve frontend build
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(join(__dirname, "../frontend/dist")));
+}
 
 // Mount all route groups under /api/v1
 app.use("/api/v1/auth",       authRoutes);
@@ -48,6 +56,13 @@ app.get("/", (_, res) => {
 app.get("/api/v1/health", (_, res) => res.json({ ok: true }));
 
 syncAllTaskNotifications();
+
+// Production: SPA fallback (after all API routes, before error handlers)
+if (process.env.NODE_ENV === "production") {
+  app.get("*", (req, res) => {
+    res.sendFile(join(__dirname, "../frontend/dist/index.html"));
+  });
+}
 
 app.use(notFoundHandler);
 app.use(errorHandler);

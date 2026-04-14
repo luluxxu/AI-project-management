@@ -149,6 +149,47 @@ Without an API key, the daily planner falls back to a built-in heuristic engine.
 
 ---
 
+## Deploy to Fly.io
+
+### Prerequisites
+- [Fly CLI](https://fly.io/docs/flyctl/install/) (`brew install flyctl`)
+- A Fly.io account (`fly auth login`)
+
+### 1. Create app and volume
+
+```bash
+fly apps create taskpilot-ai
+fly volumes create taskpilot_data --region sjc --size 1
+```
+
+> The volume is required — SQLite data lives at `/data/taskpilot.db` and must persist across deploys.
+
+### 2. Set secrets
+
+```bash
+fly secrets set \
+  JWT_SECRET="$(openssl rand -hex 32)" \
+  ADMIN_PASSWORD="your-admin-password" \
+  OPENAI_API_KEY="sk-your-key" \
+  OPENAI_MODEL="gpt-4.1-mini"
+```
+
+Optional (email notifications):
+```bash
+fly secrets set SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=you@gmail.com SMTP_PASS=your-app-password
+```
+
+### 3. Deploy
+
+```bash
+fly deploy
+fly open
+```
+
+The deployment builds the frontend, bundles it into the backend Express server, and runs as a single container. Configuration is in `fly.toml` and `Dockerfile`.
+
+---
+
 ## Testing
 
 The project includes 174 tests covering all backend API routes and frontend utility functions.

@@ -183,7 +183,7 @@ fly secrets set SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=you@gmail.com S
 
 ```bash
 fly deploy
-fly open
+fly apps open
 ```
 
 The deployment builds the frontend, bundles it into the backend Express server, and runs as a single container. Configuration is in `fly.toml` and `Dockerfile`.

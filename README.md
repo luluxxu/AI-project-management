@@ -2,6 +2,8 @@
 
 A full-stack project management platform with AI-powered task assistance, built with React + Vite on the frontend and Node.js + Express + SQLite on the backend.
 
+**Live Demo**: https://taskpilot-ai.fly.dev
+
 ## Features
 
 ### Core Project Management
@@ -117,7 +119,32 @@ cd AI-project-management
 npm run install:all
 ```
 
-### 3. Start the development servers
+### 3. Configure environment variables
+
+Copy the example file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
+
+```env
+JWT_SECRET=any-random-string-here        # Required — used to sign JWT tokens
+ADMIN_PASSWORD=pick-a-password            # Required — password for the default admin account (admin@example.com)
+
+OPENAI_API_KEY=sk-your-openai-api-key    # Optional — enables AI features
+OPENAI_MODEL=gpt-4.1-mini               # Optional — defaults to gpt-4.1-mini
+
+SMTP_HOST=smtp.gmail.com                 # Optional — enables email notifications
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+> Without `JWT_SECRET`, the server uses an insecure default. Without `OPENAI_API_KEY`, AI features fall back to a built-in heuristic engine.
+
+### 4. Start the development servers
 
 ```bash
 npm run dev
@@ -127,7 +154,7 @@ This starts both:
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3001
 
-### 4. Open the app
+### 5. Open the app
 
 Go to [http://localhost:5173](http://localhost:5173). Register a new account, then start creating workspaces, projects, and tasks.
 
@@ -135,17 +162,22 @@ Go to [http://localhost:5173](http://localhost:5173). Register a new account, th
 
 ---
 
-## AI Setup (Optional)
+## Environment Variables
 
-The AI features require an OpenAI-compatible API key.
+All configuration is in the `.env` file at the project root. See `.env.example` for the full template.
 
-1. Create a `.env` file in the project root:
-   ```
-   OPENAI_API_KEY=your-api-key-here
-   ```
-2. Restart the server
+| Variable | Required | Description |
+|---|---|---|
+| `JWT_SECRET` | Yes | Secret key for signing JWT tokens |
+| `ADMIN_PASSWORD` | Yes | Password for the default admin account (`admin@example.com`) |
+| `OPENAI_API_KEY` | No | Enables AI features (task extraction, daily planning, chat) |
+| `OPENAI_MODEL` | No | Model to use (default: `gpt-4.1-mini`) |
+| `SMTP_HOST` | No | SMTP server for email notifications |
+| `SMTP_PORT` | No | SMTP port (typically `587`) |
+| `SMTP_USER` | No | SMTP username |
+| `SMTP_PASS` | No | SMTP password or app password |
 
-Without an API key, the daily planner falls back to a built-in heuristic engine. Task extraction, project planner, and chat features return a "not configured" message.
+> Without `OPENAI_API_KEY`, the daily planner falls back to a built-in heuristic engine. Task extraction, project planner, and chat features return a "not configured" message.
 
 ---
 
@@ -158,9 +190,11 @@ Without an API key, the daily planner falls back to a built-in heuristic engine.
 ### 1. Create app and volume
 
 ```bash
-fly apps create taskpilot-ai
+fly apps create your-app-name
 fly volumes create taskpilot_data --region sjc --size 1
 ```
+
+> Replace `your-app-name` with a unique name. Then update the `app` field in `fly.toml` to match.
 
 > The volume is required — SQLite data lives at `/data/taskpilot.db` and must persist across deploys.
 

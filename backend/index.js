@@ -59,7 +59,7 @@ syncAllTaskNotifications();
 
 // Production: SPA fallback (after all API routes, before error handlers)
 if (process.env.NODE_ENV === "production") {
-  app.get("*", (req, res) => {
+  app.get("{*path}", (req, res) => {
     res.sendFile(join(__dirname, "../frontend/dist/index.html"));
   });
 }

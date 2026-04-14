@@ -24,6 +24,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust reverse proxy (Fly.io, nginx, etc.) so rate limiter reads real client IP
+app.set("trust proxy", 1);
+
 app.use(cors());
 app.use(express.json());
 

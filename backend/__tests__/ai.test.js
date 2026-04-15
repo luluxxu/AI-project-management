@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { cleanupTestDb } from "./setup.js";
 
-// Ensure no OpenAI key is set so we test fallback paths
-delete process.env.OPENAI_API_KEY;
-
 cleanupTestDb();
 
 const { default: request } = await import("supertest");
 const { default: app } = await import("../index.js");
+
+// Delete AFTER app import so dotenv.config() has already run
+delete process.env.OPENAI_API_KEY;
 
 afterAll(() => cleanupTestDb());
 

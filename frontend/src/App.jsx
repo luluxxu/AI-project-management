@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
+import { CheckIcon, MailPlusIcon } from "lucide-react";
 import DashboardPage from "./pages/DashboardPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import CalendarPage from "./pages/CalendarPage";
@@ -13,7 +14,7 @@ import DiscoverPage from "./pages/DiscoverPage";
 import LoginPage from "./pages/LoginPage";
 import { useProjectStore } from "./utils/useProjectStore";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
+import { ConfirmDialogProvider, useConfirmDialog } from "./context/ConfirmDialogContext";
 import NotificationCenter from "./components/NotificationCenter";
 import CreateWorkspaceDialog from "./components/CreateWorkspaceDialog";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -41,6 +42,26 @@ function RequireAuth({ children }) {
 
 // Guard: show empty state if user has no workspaces
 function WsGuard({ store, children, onCreateWorkspace }) {
+  const { confirm } = useConfirmDialog();
+  const [actionLoadingId, setActionLoadingId] = useState("");
+
+  const pendingInvitations = store.invitations.filter((i) => i.status === "Pending");
+
+  const handleInvitationResponse = async (invitationId, action) => {
+    const accepted = await confirm({
+      title: action === "accept" ? "Accept invitation?" : "Reject invitation?",
+      message: action === "accept" ? "You will join this workspace." : "This invitation will be declined.",
+      confirmLabel: action === "accept" ? "Accept" : "Reject",
+      tone: action === "accept" ? "primary" : "danger",
+    });
+    if (!accepted) return;
+    setActionLoadingId(invitationId);
+    try {
+      await store.respondToInvitation(invitationId, action);
+      toast.success(action === "accept" ? "Invitation accepted" : "Invitation rejected");
+    } finally { setActionLoadingId(""); }
+  };
+
   if (store.data.workspaces.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -49,6 +70,33 @@ function WsGuard({ store, children, onCreateWorkspace }) {
           <p className="text-slate-500">
             You don't have any workspaces yet. Create one to get started, or browse existing workspaces to request access.
           </p>
+
+          {pendingInvitations.length > 0 && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-left grid gap-2">
+              <h3 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                <MailPlusIcon className="size-4" />
+                Pending Invitations ({pendingInvitations.length})
+              </h3>
+              {pendingInvitations.map((invite) => (
+                <div key={invite.id} className="flex items-center justify-between gap-3 rounded-lg border border-amber-200/80 bg-white p-3">
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-slate-900">{invite.workspaceName}</span>
+                    <span className="ml-2 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{invite.role}</span>
+                    <p className="mt-0.5 text-xs text-slate-500">Invited by {invite.invitedByName}</p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button disabled={actionLoadingId === invite.id} onClick={() => handleInvitationResponse(invite.id, "accept")} className="inline-flex items-center gap-1 rounded-lg bg-[#4C5C2D] px-3 py-1.5 text-xs font-medium text-[#fff8dd] hover:bg-[#3a4822] transition disabled:opacity-50">
+                      <CheckIcon className="size-3" />Accept
+                    </button>
+                    <button disabled={actionLoadingId === invite.id} onClick={() => handleInvitationResponse(invite.id, "reject")} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition disabled:opacity-50">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <button
             className="bg-[#4C5C2D] text-[#fff8dd] rounded-xl px-4 py-3 hover:bg-[#3a4822] transition"
             onClick={onCreateWorkspace}
@@ -73,6 +121,7 @@ function AuthenticatedApp() {
   const store = useProjectStore();
   const { user, logout, isAdmin } = useAuth();
   const [showCreateWs, setShowCreateWs] = useState(false);
+  const pendingInvitationCount = store.invitations.filter((i) => i.status === "Pending").length;
 
   useEffect(() => {
     store.unreadNotifications.slice(0, 3).forEach((notification) => {
@@ -146,7 +195,14 @@ function AuthenticatedApp() {
                 `px-3 py-2 rounded-xl text-[0.9rem] text-[#d8cfbb] hover:bg-white/8 hover:text-[#FFDE42] transition duration-200 ${isActive ? " bg-[#FFDE42] text-[#1B0C0C] font-medium shadow-sm" : ""}`
               }
             >
-              {label}
+              <span className="flex items-center justify-between">
+                {label}
+                {label === "Team" && pendingInvitationCount > 0 && (
+                  <span className="ml-2 inline-flex size-5 items-center justify-center rounded-full bg-amber-500 text-[0.65rem] font-bold text-white">
+                    {pendingInvitationCount}
+                  </span>
+                )}
+              </span>
             </NavLink>
           ))}
           {isAdmin && (
